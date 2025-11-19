@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Eye, Pencil } from 'lucide-react';
 import { useUserInfo } from '@/lib/context/UserContext';
 import AddInventoryModal from './AddInventoryModal';
 import {
@@ -17,6 +17,8 @@ import {
     Cookie,
     Package
 } from "lucide-react";
+// @ts-expect-error: allow importing CSS side-effect without type declarations
+import 'react-super-responsive-table/dist/SuperResponsiveTableStyle.css';
 
 interface InventoryItem {
     _id: string;
@@ -34,8 +36,17 @@ interface DeleteConfirmModal {
     itemName: string;
 }
 
+interface EditModal {
+    isOpen: boolean;
+    item: InventoryItem | null;
+}
+
 const InventoryPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editModal, setEditModal] = useState<EditModal>({
+        isOpen: false,
+        item: null,
+    });
     const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmModal>({
         isOpen: false,
         itemId: null,
@@ -120,6 +131,40 @@ const InventoryPage = () => {
         },
     });
 
+    // Update item mutation
+    const updateItemMutation = useMutation({
+        mutationFn: async (data: {
+            itemId: string;
+            itemName: string;
+            category: string;
+            expirationPeriod: number;
+            costPerUnit: number;
+        }) => {
+            const token = localStorage.getItem('authToken');
+            if (!token) throw new Error('No authentication token');
+
+            const response = await axios.put(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/inventory/${data.itemId}`,
+                {
+                    itemName: data.itemName,
+                    category: data.category,
+                    expirationPeriod: data.expirationPeriod,
+                    costPerUnit: data.costPerUnit,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+            return response.data.data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            setEditModal({ isOpen: false, item: null });
+        },
+    });
+
     const categories = ['fruits', 'vegetables', 'dairy', 'grains', 'protein', 'beverages', 'snacks', 'other'];
 
     return (
@@ -173,48 +218,82 @@ const InventoryPage = () => {
                 {!isLoading && !error && (
                     <>
                         {inventoryData && inventoryData.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {inventoryData.map((item) => (
-                                    <div
-                                        key={item._id}
-                                        className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 flex flex-col"
-                                    >
-                                        {/* Header with Delete Icon */}
-                                        <div className="flex items-start justify-between mb-4">
-                                            <div className="flex items-center gap-2 flex-1">
-                                                {categoryIcons[item.category.toLowerCase()] || categoryIcons["other"]}
-                                                <h3 className="text-lg font-bold text-gray-900 capitalize">{item.category}</h3>
-                                            </div>
-                                            <button
-                                                onClick={() =>
-                                                    setDeleteConfirm({
-                                                        isOpen: true,
-                                                        itemId: item._id,
-                                                        itemName: item.itemName,
-                                                    })
-                                                }
-                                                disabled={deleteItemMutation.isPending}
-                                                className="ml-2 text-gray-400 hover:text-red-600 transition-colors shrink-0"
-                                                title="Delete item"
+                            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                                <table className="w-full border-collapse">
+                                    <thead>
+                                        <tr className="bg-linear-to-r from-orange-500 to-amber-500 text-white">
+                                            <th className="px-6 py-3 text-left font-semibold">Category</th>
+                                            <th className="px-6 py-3 text-left font-semibold">Item Name</th>
+                                            <th className="px-6 py-3 text-left font-semibold">Expiration Period (days)</th>
+                                            <th className="px-6 py-3 text-left font-semibold">Cost Per Unit</th>
+                                            <th className="px-6 py-3 text-center font-semibold">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {inventoryData.map((item, index) => (
+                                            <tr
+                                                key={item._id}
+                                                className={`border-b border-gray-200 hover:bg-orange-50 transition-colors ${
+                                                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                                }`}
                                             >
-                                                <Trash2 className="w-5 h-5" />
-                                            </button>
-                                        </div>
-
-                                        {/* Quantity Display */}
-                                        <div className="mb-6 p-4 bg-orange-50 rounded-lg">
-                                            <p className="text-2xl font-bold text-orange-600">{item.itemName}</p>
-                                        </div>
-
-                                        {/* Details Button */}
-                                        <button
-                                            onClick={() => router.push(`/dashboard/inventory/${item._id}`)}
-                                            className="w-full mt-auto bg-linear-to-r from-orange-500 to-amber-600 text-white py-2 rounded-lg hover:shadow-lg hover:shadow-orange-500/40 transition-all duration-300 font-semibold"
-                                        >
-                                            View Details
-                                        </button>
-                                    </div>
-                                ))}
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        {categoryIcons[item.category.toLowerCase()] || categoryIcons["other"]}
+                                                        <span className="font-medium text-gray-900 capitalize">{item.category}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className="font-semibold text-gray-900">{item.itemName}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600">
+                                                    {item.expirationPeriod} days
+                                                </td>
+                                                <td className="px-6 py-4 text-gray-600">
+                                                    ${item.costPerUnit.toFixed(2)}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => router.push(`/dashboard/inventory/${item._id}`)}
+                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            title="View details"
+                                                        >
+                                                            <Eye className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                setEditModal({
+                                                                    isOpen: true,
+                                                                    item: item,
+                                                                })
+                                                            }
+                                                            disabled={updateItemMutation.isPending}
+                                                            className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                                            title="Edit item"
+                                                        >
+                                                            <Pencil className="w-5 h-5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                setDeleteConfirm({
+                                                                    isOpen: true,
+                                                                    itemId: item._id,
+                                                                    itemName: item.itemName,
+                                                                })
+                                                            }
+                                                            disabled={deleteItemMutation.isPending}
+                                                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                            title="Delete item"
+                                                        >
+                                                            <Trash2 className="w-5 h-5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         ) : (
                             <div className="bg-white rounded-lg shadow-md p-12 text-center">
@@ -229,6 +308,99 @@ const InventoryPage = () => {
                             </div>
                         )}
                     </>
+                )}
+
+                {/* Edit Modal */}
+                {editModal.isOpen && editModal.item && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Item</h2>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    const formData = new FormData(e.currentTarget);
+                                    updateItemMutation.mutate({
+                                        itemId: editModal.item!._id,
+                                        itemName: formData.get('itemName') as string,
+                                        category: formData.get('category') as string,
+                                        expirationPeriod: parseInt(formData.get('expirationPeriod') as string),
+                                        costPerUnit: parseFloat(formData.get('costPerUnit') as string),
+                                    });
+                                }}
+                                className="space-y-4"
+                            >
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
+                                    <input
+                                        type="text"
+                                        name="itemName"
+                                        defaultValue={editModal.item.itemName}
+                                        required
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                                    <select
+                                        name="category"
+                                        defaultValue={editModal.item.category}
+                                        required
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                    >
+                                        {categories.map((cat) => (
+                                            <option key={cat} value={cat} className="capitalize">
+                                                {cat}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Expiration Period (days)</label>
+                                    <input
+                                        type="number"
+                                        name="expirationPeriod"
+                                        defaultValue={editModal.item.expirationPeriod}
+                                        min="1"
+                                        required
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cost Per Unit</label>
+                                    <input
+                                        type="number"
+                                        name="costPerUnit"
+                                        defaultValue={editModal.item.costPerUnit}
+                                        min="0"
+                                        step="0.01"
+                                        required
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditModal({ isOpen: false, item: null })}
+                                        disabled={updateItemMutation.isPending}
+                                        className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={updateItemMutation.isPending}
+                                        className="flex-1 px-4 py-2 bg-linear-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:shadow-lg hover:shadow-orange-500/40 transition-all duration-300 font-medium disabled:opacity-50"
+                                    >
+                                        {updateItemMutation.isPending ? 'Updating...' : 'Update'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 )}
 
                 {/* Delete Confirmation Modal */}
