@@ -136,7 +136,7 @@
 
 /* For Firefox */
 .sidebar {
-  scrollbar-width: thin;
+  scrollbar-width:none;
   scrollbar-color: #ffffff #d6dae2;
 }
 

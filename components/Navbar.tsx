@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useUserInfo } from '@/lib/context/UserContext';
+import { Leaf } from 'lucide-react';
 
 const Navbar = () => {
     const { isAuthenticated, user, clearUser } = useUserInfo();
@@ -16,7 +17,8 @@ const Navbar = () => {
         <nav className="fixed z-50 top-5 left-1/2 transform -translate-x-1/2 backdrop-blur-xl bg-white/80 border border-white/40 shadow-lg w-[85%] max-w-6xl rounded-2xl px-8 py-3 transition-all duration-300 hover:bg-white/90 hover:border-white/60">
             <div className="flex items-center justify-between">
                 {/* Logo */}
-                <Link href="/" className="group flex items-center gap-2">
+                <Link href="/" className="group flex items-center gap-1">
+                    <Leaf className="w-5 h-5 text-orange-400" />
                     <div className="text-2xl font-black italic bg-linear-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">
                         NutriMATE
                     </div>

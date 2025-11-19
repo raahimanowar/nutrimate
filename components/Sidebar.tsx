@@ -50,7 +50,6 @@ const Sidebar = () => {
                     </div>
                     <div>
                         <p className="text-lg font-black text-gray-900">NutriMATE</p>
-                        <p className="text-xs text-orange-600">Dashboard</p>
                     </div>
                 </Link>
                 <Separator />

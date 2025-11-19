@@ -1,12 +1,21 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { Bell, Search, User, ChevronDown, LogOut, Settings, HelpCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useUserInfo } from "@/lib/context/UserContext";
 
 const DashboardNavbar = () => {
   const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const { user, clearUser } = useUserInfo();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    clearUser();
+    router.push('/login');
+  };
 
   return (
     <nav className="fixed top-0 right-0 left-72 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-30 shadow-sm">
@@ -70,8 +79,8 @@ const DashboardNavbar = () => {
               <User className="w-4 h-4 text-white" />
             </div>
             <div className="text-left hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">John Doe</p>
-              <p className="text-xs text-gray-500">Premium</p>
+              <p className="text-sm font-medium text-gray-900">{user?.username || 'User'}</p>
+              <p className="text-xs text-gray-500">{user?.role || 'user'}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-orange-600 transition-colors" />
           </button>
@@ -80,10 +89,14 @@ const DashboardNavbar = () => {
           {isProfileOpen && (
             <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-40">
               <div className="p-4 border-b border-gray-100">
-                <p className="text-sm font-semibold text-gray-900">Account</p>
+                <p className="text-sm font-semibold text-gray-900">{user?.email || 'Account'}</p>
+                <p className="text-xs text-gray-500 mt-1">{user?.username || 'User'}</p>
               </div>
               <div className="py-2">
-                <button className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2">
+                <button 
+                  onClick={() => router.push('/dashboard/profile')}
+                  className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
+                >
                   <Settings className="w-4 h-4" />
                   Profile Settings
                 </button>
@@ -93,7 +106,10 @@ const DashboardNavbar = () => {
                 </button>
               </div>
               <Separator />
-              <button className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left transition-colors font-medium flex items-center gap-2">
+              <button 
+                onClick={handleLogout}
+                className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left transition-colors font-medium flex items-center gap-2"
+              >
                 <LogOut className="w-4 h-4" />
                 Logout
               </button>
