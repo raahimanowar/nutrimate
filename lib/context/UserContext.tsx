@@ -49,7 +49,7 @@ export const UserInfoProvider: React.FC<{ children: ReactNode }> = ({ children }
         return;
       }
 
-      const response = await axios.get('http://localhost:5000/api/users/profile', {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },

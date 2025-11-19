@@ -29,7 +29,7 @@ const ItemDetailsPage = () => {
       if (!token) throw new Error('No authentication token');
 
       const response = await axios.get(
-        `http://localhost:5000/api/inventory/${itemId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/inventory/${itemId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

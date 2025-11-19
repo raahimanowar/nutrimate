@@ -63,7 +63,7 @@ const LoginPage = () => {
         setIsSubmitting(true);
 
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/signin', {
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signin`, {
                 identifier: formData.email,
                 password: formData.password,
             });
