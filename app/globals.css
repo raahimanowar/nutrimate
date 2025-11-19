@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "react-super-responsive-table/dist/SuperResponsiveTableStyle.css";
 
 @custom-variant dark (&:is(.dark *));
 
