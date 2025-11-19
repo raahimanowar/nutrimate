@@ -10,7 +10,8 @@ interface AddInventoryModalProps {
   onSubmit: (data: {
     itemName: string;
     category: string;
-    expirationPeriod: number;
+    expirationDate: string | null;
+    hasExpiration: boolean;
     costPerUnit: number;
   }) => void;
   isLoading: boolean;
@@ -27,7 +28,8 @@ const AddInventoryModal: React.FC<AddInventoryModalProps> = ({
   const [formData, setFormData] = useState({
     itemName: '',
     category: 'fruits',
-    expirationPeriod: 7,
+    expirationDate: '',
+    hasExpiration: true,
     costPerUnit: 0,
   });
 
@@ -40,12 +42,12 @@ const AddInventoryModal: React.FC<AddInventoryModalProps> = ({
       newErrors.itemName = 'Item name is required';
     }
 
-    if (formData.expirationPeriod <= 0) {
-      newErrors.expirationPeriod = 'Expiration period must be greater than 0';
-    }
-
     if (formData.costPerUnit < 0) {
       newErrors.costPerUnit = 'Cost per unit cannot be negative';
+    }
+
+    if (formData.hasExpiration && !formData.expirationDate) {
+      newErrors.expirationDate = 'Expiration date is required when expiration is enabled';
     }
 
     setErrors(newErrors);
@@ -60,7 +62,8 @@ const AddInventoryModal: React.FC<AddInventoryModalProps> = ({
     onSubmit({
       itemName: formData.itemName,
       category: formData.category,
-      expirationPeriod: formData.expirationPeriod,
+      expirationDate: formData.hasExpiration ? formData.expirationDate : null,
+      hasExpiration: formData.hasExpiration,
       costPerUnit: formData.costPerUnit,
     });
 
@@ -68,7 +71,8 @@ const AddInventoryModal: React.FC<AddInventoryModalProps> = ({
     setFormData({
       itemName: '',
       category: 'fruits',
-      expirationPeriod: 7,
+      expirationDate: '',
+      hasExpiration: true,
       costPerUnit: 0,
     });
     setErrors({});
@@ -139,37 +143,45 @@ const AddInventoryModal: React.FC<AddInventoryModalProps> = ({
             </select>
           </div>
 
-          {/* Expiration Period */}
+          {/* Has Expiration */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Expiration Period (days)
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.hasExpiration}
+                onChange={(e) =>
+                  setFormData({ ...formData, hasExpiration: e.target.checked })
+                }
+                className="w-4 h-4 rounded accent-orange-500"
+                disabled={isLoading}
+              />
+              Has Expiration Date
             </label>
-            <input
-              type="number"
-              value={formData.expirationPeriod}
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  expirationPeriod: parseInt(e.target.value) || 0,
-                });
-                if (errors.expirationPeriod)
-                  setErrors({ ...errors, expirationPeriod: '' });
-              }}
-              placeholder="7"
-              min="1"
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
-                errors.expirationPeriod
-                  ? 'border-red-300 focus:ring-red-500/30'
-                  : 'border-gray-300 focus:ring-orange-500/30'
-              }`}
-              disabled={isLoading}
-            />
-            {errors.expirationPeriod && (
-              <p className="text-red-600 text-sm mt-1">
-                {errors.expirationPeriod}
-              </p>
-            )}
           </div>
+
+          {formData.hasExpiration && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Expiration Date
+              </label>
+              <input
+                type="date"
+                value={formData.expirationDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, expirationDate: e.target.value })
+                }
+                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                  errors.expirationDate
+                    ? 'border-red-300 focus:ring-red-500/30'
+                    : 'border-gray-300 focus:ring-orange-500/30'
+                }`}
+                disabled={isLoading}
+              />
+              {errors.expirationDate && (
+                <p className="text-red-600 text-sm mt-1">{errors.expirationDate}</p>
+              )}
+            </div>
+          )}
 
           {/* Cost Per Unit */}
           <div>

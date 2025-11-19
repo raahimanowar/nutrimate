@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { useUserInfo } from '@/lib/context/UserContext';
-import { Leaf } from 'lucide-react';
 
 const Navbar = () => {
     const { isAuthenticated, user, clearUser } = useUserInfo();
@@ -18,7 +17,6 @@ const Navbar = () => {
             <div className="flex items-center justify-between">
                 {/* Logo */}
                 <Link href="/" className="group flex items-center gap-1">
-                    <Leaf className="w-5 h-5 text-orange-400" />
                     <div className="text-2xl font-black italic bg-linear-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">
                         NutriMATE
                     </div>
