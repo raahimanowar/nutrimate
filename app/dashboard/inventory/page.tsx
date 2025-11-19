@@ -17,8 +17,6 @@ import {
     Cookie,
     Package
 } from "lucide-react";
-// @ts-expect-error: allow importing CSS side-effect without type declarations
-import 'react-super-responsive-table/dist/SuperResponsiveTableStyle.css';
 
 interface InventoryItem {
     _id: string;

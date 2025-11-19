@@ -25,6 +25,7 @@ const mainMenuItems = [
 ];
 
 const communityItems = [
+    { label: "Family", href: "/dashboard/family", icon: Users },
     { label: "Community", href: "/dashboard/community", icon: Users },
 ];
 
