@@ -19,7 +19,6 @@ const mainMenuItems = [
     { label: "Profile", href: "/dashboard/profile", icon: Settings },
     { label: "Daily Log", href: "/dashboard/dailylog", icon: Apple },
     { label: "Inventory", href: "/dashboard/inventory", icon: Package },
-    { label: "Insights", href: "/dashboard/insights", icon: BarChart3 },
     { label: "Tips & Resources", href: "/dashboard/tips", icon: Lightbulb },
 ];
 
@@ -111,7 +110,7 @@ const Sidebar = () => {
             )}
 
             {/* STATS SECTION */}
-            {!collapsed && (
+            {/* {!collapsed && (
                 <div className="bg-linear-to-br from-orange-500/10 to-amber-500/5 rounded-2xl p-4 border border-orange-500/20">
                     <p className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-3">
                         Your Impact
@@ -137,7 +136,7 @@ const Sidebar = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            )} */}
 
             {/* BOTTOM MENU */}
             {/* <div className="space-y-1 pt-4">

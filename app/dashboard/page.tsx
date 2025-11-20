@@ -44,7 +44,8 @@ const fetchTrackingSummary = async (): Promise<TrackingSummaryResponse> => {
       Authorization: `Bearer ${token}`,
     },
   });
-
+  console.log(response.data);
+  
   return response.data;
 };
 
@@ -188,7 +189,7 @@ const DashboardPage = () => {
         </div>
       )}
 
-      
+
 
       {/* Empty State */}
       {inventoryCount === 0 && recentLogs.length === 0 && (
