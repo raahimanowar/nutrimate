@@ -55,7 +55,7 @@ A clean and intuitive dashboard gives users a quick snapshot of:
 - **Shadcn**
 - **Tanstack**
 
-## 🚀 **Installation Guide**
+## Getting Started (Local Development)
 
 ### 1. Clone the repository
 
@@ -66,30 +66,25 @@ cd nutrimate
 
 ### 2. Install dependencies
 
+Make sure you have **npm** installed. Then run:
+
 ```bash
 npm install
 ```
 
 ### 3. Set up environment variables
 
-Create a `.env` file based on `.env.example`.
-⚠️ **Do NOT commit your `.env`.**
+Create a `.env` file in the project root based on `.env.example`.
 
-### 4. Start servers
-
-**Frontend**
+### 4. Start the development server
 
 ```bash
 npm run dev
 ```
 
-**Backend**
+### The frontend will now be running locally
 
-```bash
-npm run dev
-```
-
-### 5. Visit the app
+Open your browser at:
 
 ```
 http://localhost:3000
