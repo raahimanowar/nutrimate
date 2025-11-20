@@ -209,8 +209,14 @@ const DashboardPage = () => {
   }
 
   // Prepare calorie chart data
+  const formatDateFromString = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
   const calorieChartData = calorieData?.data?.chartData?.calories?.map((item, idx) => ({
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: formatDateFromString(item.date),
     calories: item.value,
     movingAvg: item.movingAverage,
     protein: calorieData.data.chartData.protein[idx]?.value || 0,
@@ -220,7 +226,7 @@ const DashboardPage = () => {
 
   // Prepare water chart data
   const waterChartData = waterData?.data?.chartData?.waterIntake?.map((item) => ({
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: formatDateFromString(item.date),
     water: item.value,
     goal: 8,
     movingAvg: item.movingAverage || item.value,

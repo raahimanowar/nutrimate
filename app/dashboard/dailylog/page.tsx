@@ -151,6 +151,10 @@ const DailyLogPage = () => {
     mutationFn: addItem,
     onSuccess: (data) => {
       queryClient.setQueryData(['dailyLog', selectedDate], data);
+      // Invalidate dashboard queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['trackingSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['calorieData'] });
+      queryClient.invalidateQueries({ queryKey: ['waterData'] });
       setNewItem({
         itemName: '',
         quantity: 1,
@@ -175,6 +179,10 @@ const DailyLogPage = () => {
     mutationFn: deleteItem,
     onSuccess: (data) => {
       queryClient.setQueryData(['dailyLog', selectedDate], data);
+      // Invalidate dashboard queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['trackingSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['calorieData'] });
+      queryClient.invalidateQueries({ queryKey: ['waterData'] });
     },
   });
 
@@ -185,12 +193,18 @@ const DailyLogPage = () => {
       // Update the query data immediately to prevent any UI inconsistency
       queryClient.setQueryData(['dailyLog', selectedDate], data);
       
+      // Invalidate dashboard queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['trackingSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['waterData'] });
+      
       // Also invalidate the query to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['dailyLog', selectedDate] });
     },
     onError: () => {
       // Refetch on error to restore correct state
       queryClient.invalidateQueries({ queryKey: ['dailyLog', selectedDate] });
+      queryClient.invalidateQueries({ queryKey: ['trackingSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['waterData'] });
     },
   });
 
