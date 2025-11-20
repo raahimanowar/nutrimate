@@ -265,7 +265,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className=" py-12 px-4 sm:px-6 lg:px-8">
+    <div className=" py-4 px-4 sm:px-6 lg:px-4">
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-96 h-96 bg-linear-to-br from-orange-200/20 to-amber-100/10 rounded-full blur-3xl opacity-60"></div>
@@ -280,10 +280,9 @@ const ProfilePage = () => {
             {!isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="group relative inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-0.5"
+                className="group relative inline-flex items-center gap-2 px-3 py-3 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-0.5"
               >
                 <Edit2 size={18} />
-                Edit Profile
               </button>
             )}
           </div>

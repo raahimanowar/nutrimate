@@ -14,7 +14,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                     }}
                 >
                     {/* Content */}
-                    <div className="relative p-8 bg-linear-to-br from-orange-50 via-white to-amber-50 min-h-screen ">
+                    <div className="relative p-4 bg-linear-to-br from-orange-50 via-white to-amber-50 min-h-screen ">
                         {children}
                     </div>
                 </main>

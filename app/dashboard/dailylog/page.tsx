@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Plus, Trash2, Save, X, Calendar, Droplet, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, X, Calendar, Droplet, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface DailyLogItem {
@@ -111,7 +111,8 @@ const updateWaterIntake = async (data: { date: string; waterIntake: number }): P
 
 const DailyLogPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [newItem, setNewItem] = useState<Omit<DailyLogItem, '_id'>>({
     itemName: '',
     quantity: 1,
@@ -165,7 +166,7 @@ const DailyLogPage = () => {
         mealType: 'snack',
         notes: '',
       });
-      setShowAddForm(false);
+      setShowAddModal(false);
     },
   });
 
@@ -198,6 +199,7 @@ const DailyLogPage = () => {
       date: selectedDate,
       item: newItem,
     });
+    setShowAddModal(false);
   };
 
   const handleDeleteItem = (itemId: string) => {
@@ -342,7 +344,7 @@ const DailyLogPage = () => {
   }
 
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8">
+    <div className="py-5 px-4 sm:px-6 lg:px-8">
       <Toaster
         position="top-right"
         reverseOrder={false}
@@ -353,22 +355,33 @@ const DailyLogPage = () => {
         }}
       />
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-black text-gray-900 mb-2">Daily Food Log</h1>
-          <p className="text-gray-600">Track your nutrition intake</p>
-        </div>
+        {/* Header with Date Selector Button */}
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-3xl font-black text-gray-900">Daily Log</h1>
+          <div className="relative">
+            <button
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-semibold shadow-lg hover:shadow-xl"
+            >
+              <Calendar className="w-5 h-5" />
+              {new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </button>
 
-        {/* Date Selector */}
-        <div className="mb-8 bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 shadow-lg p-6">
-          <div className="flex items-center gap-4">
-            <Calendar className="w-5 h-5 text-orange-600" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
+            {/* Date Picker Dropdown */}
+            {showDatePicker && (
+              <div className="absolute top-full right-0 mt-2 bg-white rounded-xl border-2 border-orange-200 shadow-xl p-4 z-40">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setShowDatePicker(false);
+                  }}
+                  className="px-4 py-2 border-2 border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-semibold"
+                  autoFocus
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -420,7 +433,7 @@ const DailyLogPage = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold text-gray-900">Food Items ({dailyLog?.items?.length || 0})</h3>
                 <button
-                  onClick={() => setShowAddForm(!showAddForm)}
+                  onClick={() => setShowAddModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
                 >
                   <Plus size={18} />
@@ -428,63 +441,86 @@ const DailyLogPage = () => {
                 </button>
               </div>
 
-              {/* Add Form */}
-              {showAddForm && (
-                <div className="mb-6 bg-linear-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-200/50 p-8">
-                  <h4 className="font-bold text-2xl text-gray-900 mb-6 flex items-center gap-2">
-                    <Plus className="w-6 h-6 text-orange-600" />
-                    Add New Food Item
-                  </h4>
+              {/* Add Form - Normal inline form */}
+              {showAddModal && (
+                <div className="bg-linear-to-br from-orange-50 to-amber-50 rounded-2xl border-2 border-orange-200 p-6 mb-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="font-bold text-xl text-gray-900 flex items-center gap-2">
+                      <Plus className="w-6 h-6 text-orange-600" />
+                      Add Food Item
+                    </h4>
+                    <button
+                      onClick={() => {
+                        setShowAddModal(false);
+                        setNewItem({
+                          itemName: '',
+                          quantity: 1,
+                          unit: 'grams',
+                          category: 'other',
+                          calories: 0,
+                          protein: 0,
+                          carbs: 0,
+                          fats: 0,
+                          fiber: 0,
+                          sugar: 0,
+                          sodium: 0,
+                          mealType: 'snack',
+                          notes: '',
+                        });
+                      }}
+                      className="p-2 hover:bg-orange-200 rounded-lg transition"
+                    >
+                      <X className="w-5 h-5 text-orange-600" />
+                    </button>
+                  </div>
                   
-                  <div className="space-y-6">
-                    {/* Row 1: Basic Info */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    {/* Basic Info Row */}
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Food Item Name *</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Item Name *</label>
                         <input
                           type="text"
-                          placeholder="e.g., Apple, Chicken Breast, Pasta"
+                          placeholder="e.g., Apple"
                           value={newItem.itemName}
                           onChange={(e) => setNewItem({ ...newItem, itemName: e.target.value })}
-                          className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400 font-medium"
+                          className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Quantity *</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Qty *</label>
                         <input
                           type="number"
-                          placeholder="e.g., 100"
+                          placeholder="100"
                           value={newItem.quantity}
                           onChange={(e) => setNewItem({ ...newItem, quantity: parseFloat(e.target.value) || 0 })}
-                          className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400 font-medium"
+                          className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
                         />
                       </div>
                     </div>
 
-                    {/* Row 2: Unit & Category */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Unit & Category */}
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Unit *</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Unit</label>
                         <select
                           value={newItem.unit}
                           onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                          className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 font-medium"
+                          className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
                         >
-                          <option value="grams">Grams (g)</option>
+                          <option value="grams">Grams</option>
                           <option value="pieces">Pieces</option>
                           <option value="cups">Cups</option>
                           <option value="servings">Servings</option>
-                          <option value="ml">Milliliters (ml)</option>
-                          <option value="tbsp">Tablespoons</option>
-                          <option value="tsp">Teaspoons</option>
+                          <option value="ml">ML</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Category *</label>
+                        <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Category</label>
                         <select
                           value={newItem.category}
                           onChange={(e) => setNewItem({ ...newItem, category: e.target.value as "fruits" | "vegetables" | "dairy" | "grains" | "protein" | "beverages" | "snacks" | "other" })}
-                          className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 font-medium"
+                          className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
                         >
                           <option value="fruits">🍎 Fruits</option>
                           <option value="vegetables">🥕 Vegetables</option>
@@ -498,13 +534,13 @@ const DailyLogPage = () => {
                       </div>
                     </div>
 
-                    {/* Row 3: Meal Type */}
+                    {/* Meal Type */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Meal Type *</label>
+                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Meal Type</label>
                       <select
                         value={newItem.mealType}
                         onChange={(e) => setNewItem({ ...newItem, mealType: e.target.value as "breakfast" | "lunch" | "dinner" | "snack" | "beverage" })}
-                        className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 font-medium"
+                        className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
                       >
                         <option value="breakfast">🌅 Breakfast</option>
                         <option value="lunch">🍽️ Lunch</option>
@@ -514,99 +550,90 @@ const DailyLogPage = () => {
                       </select>
                     </div>
 
-                    {/* Nutrition Facts Section */}
-                    <div className="bg-white/60 rounded-xl p-6 border-2 border-orange-100">
-                      <h5 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-orange-600" />
-                        Nutrition Information
-                      </h5>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Nutrition Grid */}
+                    <div className="bg-white rounded-lg p-4 border border-orange-300">
+                      <h5 className="text-xs font-bold text-orange-700 mb-3 uppercase tracking-wider">Nutrition (per serving)</h5>
+                      <div className="grid grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">Calories *</label>
+                          <label className="block text-xs text-gray-600 font-semibold mb-1">Calories</label>
                           <input
                             type="number"
                             placeholder="0"
                             value={newItem.calories || 0}
                             onChange={(e) => setNewItem({ ...newItem, calories: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-2 bg-orange-50 border-2 border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 font-medium"
+                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
                           />
-                          <p className="text-xs text-gray-500 mt-1">kcal</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">Protein</label>
+                          <label className="block text-xs text-gray-600 font-semibold mb-1">Protein (g)</label>
                           <input
                             type="number"
                             placeholder="0"
                             value={newItem.protein || 0}
                             onChange={(e) => setNewItem({ ...newItem, protein: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-2 bg-red-50 border-2 border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900 font-medium"
+                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
                           />
-                          <p className="text-xs text-gray-500 mt-1">g</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">Carbs</label>
+                          <label className="block text-xs text-gray-600 font-semibold mb-1">Carbs (g)</label>
                           <input
                             type="number"
                             placeholder="0"
                             value={newItem.carbs || 0}
                             onChange={(e) => setNewItem({ ...newItem, carbs: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-2 bg-yellow-50 border-2 border-yellow-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900 font-medium"
+                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
                           />
-                          <p className="text-xs text-gray-500 mt-1">g</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">Fats</label>
+                          <label className="block text-xs text-gray-600 font-semibold mb-1">Fats (g)</label>
                           <input
                             type="number"
                             placeholder="0"
                             value={newItem.fats || 0}
                             onChange={(e) => setNewItem({ ...newItem, fats: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-2 bg-green-50 border-2 border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 font-medium"
+                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
                           />
-                          <p className="text-xs text-gray-500 mt-1">g</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">Fiber</label>
+                          <label className="block text-xs text-gray-600 font-semibold mb-1">Fiber (g)</label>
                           <input
                             type="number"
                             placeholder="0"
                             value={newItem.fiber || 0}
                             onChange={(e) => setNewItem({ ...newItem, fiber: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-2 bg-blue-50 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium"
+                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
                           />
-                          <p className="text-xs text-gray-500 mt-1">g</p>
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-gray-700 mb-2">Sugar</label>
+                          <label className="block text-xs text-gray-600 font-semibold mb-1">Sugar (g)</label>
                           <input
                             type="number"
                             placeholder="0"
                             value={newItem.sugar || 0}
                             onChange={(e) => setNewItem({ ...newItem, sugar: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-4 py-2 bg-purple-50 border-2 border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 font-medium"
+                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
                           />
-                          <p className="text-xs text-gray-500 mt-1">g</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Notes */}
                     <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">Notes (Optional)</label>
+                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
                       <textarea
-                        placeholder="Add any notes about this item (e.g., brand, cooking method)..."
+                        placeholder="Optional notes..."
                         value={newItem.notes || ''}
                         onChange={(e) => setNewItem({ ...newItem, notes: e.target.value })}
-                        rows={3}
-                        className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400 font-medium"
+                        rows={2}
+                        className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
                       />
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-3 justify-end pt-4 border-t border-orange-200">
+                    <div className="flex gap-3 pt-4 border-t border-orange-200">
                       <button
                         onClick={() => {
-                          setShowAddForm(false);
+                          setShowAddModal(false);
                           setNewItem({
                             itemName: '',
                             quantity: 1,
@@ -623,17 +650,15 @@ const DailyLogPage = () => {
                             notes: '',
                           });
                         }}
-                        className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2"
+                        className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition text-sm"
                       >
-                        <X className="w-4 h-4" />
                         Cancel
                       </button>
                       <button
                         onClick={handleAddItem}
                         disabled={addMutation.isPending || !newItem.itemName}
-                        className="px-6 py-3 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-4 py-2 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold rounded-lg hover:shadow-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Save className="w-4 h-4" />
                         {addMutation.isPending ? 'Adding...' : 'Add Item'}
                       </button>
                     </div>
