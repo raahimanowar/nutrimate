@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Plus, Trash2, Save, X, Calendar, Droplet, TrendingUp, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Save, X, Calendar, Droplet, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface DailyLogItem {
   _id: string;
@@ -39,7 +40,26 @@ interface DailyLog {
   updatedAt: string;
 }
 
+interface UserProfile {
+  id: string;
+  username: string;
+  dietaryNeeds?: {
+    waterIntakeGoal?: number;
+  };
+}
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+const getUserProfile = async (): Promise<UserProfile> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) throw new Error('No authentication token');
+
+  const response = await axios.get(`${API_BASE}/api/users/profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return response.data.data;
+};
 
 const getDailyLog = async (date: string): Promise<DailyLog> => {
   const token = localStorage.getItem('authToken');
@@ -110,6 +130,15 @@ const DailyLogPage = () => {
 
   const queryClient = useQueryClient();
 
+  // Fetch user profile to get water intake goal
+  const { data: userProfile } = useQuery<UserProfile>({
+    queryKey: ['userProfile'],
+    queryFn: () => getUserProfile(),
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+
+  const waterIntakeGoal = userProfile?.dietaryNeeds?.waterIntakeGoal || 8;
+
   // Fetch daily log
   const { data: dailyLog, isLoading, error } = useQuery<DailyLog>({
     queryKey: ['dailyLog', selectedDate],
@@ -152,7 +181,15 @@ const DailyLogPage = () => {
   const waterMutation = useMutation({
     mutationFn: updateWaterIntake,
     onSuccess: (data) => {
+      // Update the query data immediately to prevent any UI inconsistency
       queryClient.setQueryData(['dailyLog', selectedDate], data);
+      
+      // Also invalidate the query to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ['dailyLog', selectedDate] });
+    },
+    onError: () => {
+      // Refetch on error to restore correct state
+      queryClient.invalidateQueries({ queryKey: ['dailyLog', selectedDate] });
     },
   });
 
@@ -164,19 +201,88 @@ const DailyLogPage = () => {
   };
 
   const handleDeleteItem = (itemId: string) => {
-    if (dailyLog) {
-      deleteMutation.mutate({
-        logId: dailyLog._id,
-        itemId,
-      });
-    }
+    const item = dailyLog?.items.find(i => i._id === itemId);
+    if (!item) return;
+
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-semibold text-gray-900">Delete Item?</p>
+        <p className="text-sm text-gray-600">Are you sure you want to delete <span className="font-bold">{item.itemName}</span>?</p>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 transition"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              if (dailyLog) {
+                deleteMutation.mutate({
+                  logId: dailyLog._id,
+                  itemId,
+                });
+              }
+            }}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+      style: {
+        background: '#fff',
+        color: '#000',
+        borderRadius: '12px',
+        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+        border: '1px solid rgba(0, 0, 0, 0.1)',
+        padding: '16px',
+      }
+    });
   };
 
   const handleWaterIntakeChange = (value: number) => {
-    waterMutation.mutate({
-      date: selectedDate,
-      waterIntake: value,
-    });
+    const wasBeforeGoal = (dailyLog?.waterIntake || 0) < waterIntakeGoal;
+    const isAfterGoal = value >= waterIntakeGoal;
+
+    waterMutation.mutate(
+      {
+        date: selectedDate,
+        waterIntake: value,
+      },
+      {
+        onSuccess: () => {
+          // Show success toast when goal is reached
+          if (wasBeforeGoal && isAfterGoal) {
+            toast.success(
+              () => (
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <div>
+                    <p className="font-bold text-gray-900">Great Job! 🎉</p>
+                    <p className="text-sm text-gray-600">You&apos;ve reached your daily water goal!</p>
+                  </div>
+                </div>
+              ),
+              {
+                duration: 4000,
+                style: {
+                  background: '#dcfce7',
+                  color: '#000',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+                  border: '2px solid #22c55e',
+                  padding: '16px',
+                }
+              }
+            );
+          }
+        }
+      }
+    );
   };
 
   const getMealTypeColor = (mealType: string) => {
@@ -237,6 +343,15 @@ const DailyLogPage = () => {
 
   return (
     <div className="py-12 px-4 sm:px-6 lg:px-8">
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        gutter={8}
+        containerStyle={{
+          top: 20,
+          right: 20,
+        }}
+      />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -315,111 +430,213 @@ const DailyLogPage = () => {
 
               {/* Add Form */}
               {showAddForm && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <h4 className="font-bold text-gray-900 mb-4">Add New Food Item</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="Item Name"
-                      value={newItem.itemName}
-                      onChange={(e) => setNewItem({ ...newItem, itemName: e.target.value })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Quantity"
-                      value={newItem.quantity}
-                      onChange={(e) => setNewItem({ ...newItem, quantity: parseFloat(e.target.value) })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                    <select
-                      value={newItem.unit}
-                      onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="grams">grams</option>
-                      <option value="pieces">pieces</option>
-                      <option value="cups">cups</option>
-                      <option value="servings">servings</option>
-                      <option value="ml">ml</option>
-                    </select>
-                    <select
-                      value={newItem.category}
-                      onChange={(e) => setNewItem({ ...newItem, category: e.target.value as "fruits" | "vegetables" | "dairy" | "grains" | "protein" | "beverages" | "snacks" | "other" })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="fruits">Fruits</option>
-                      <option value="vegetables">Vegetables</option>
-                      <option value="dairy">Dairy</option>
-                      <option value="grains">Grains</option>
-                      <option value="protein">Protein</option>
-                      <option value="beverages">Beverages</option>
-                      <option value="snacks">Snacks</option>
-                      <option value="other">Other</option>
-                    </select>
-                    <select
-                      value={newItem.mealType}
-                      onChange={(e) => setNewItem({ ...newItem, mealType: e.target.value as "breakfast" | "lunch" | "dinner" | "snack" | "beverage" })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    >
-                      <option value="breakfast">Breakfast</option>
-                      <option value="lunch">Lunch</option>
-                      <option value="dinner">Dinner</option>
-                      <option value="snack">Snack</option>
-                      <option value="beverage">Beverage</option>
-                    </select>
-                    <input
-                      type="number"
-                      placeholder="Calories"
-                      value={newItem.calories || 0}
-                      onChange={(e) => setNewItem({ ...newItem, calories: parseFloat(e.target.value) })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Protein (g)"
-                      value={newItem.protein || 0}
-                      onChange={(e) => setNewItem({ ...newItem, protein: parseFloat(e.target.value) })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Carbs (g)"
-                      value={newItem.carbs || 0}
-                      onChange={(e) => setNewItem({ ...newItem, carbs: parseFloat(e.target.value) })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Fats (g)"
-                      value={newItem.fats || 0}
-                      onChange={(e) => setNewItem({ ...newItem, fats: parseFloat(e.target.value) })}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    />
-                  </div>
-                  <textarea
-                    placeholder="Notes (optional)"
-                    value={newItem.notes || ''}
-                    onChange={(e) => setNewItem({ ...newItem, notes: e.target.value })}
-                    className="w-full mt-4 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    rows={2}
-                  />
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={handleAddItem}
-                      disabled={addMutation.isPending || !newItem.itemName}
-                      className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
-                    >
-                      <Save size={18} />
-                      Add
-                    </button>
-                    <button
-                      onClick={() => setShowAddForm(false)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500"
-                    >
-                      <X size={18} />
-                      Cancel
-                    </button>
+                <div className="mb-6 bg-linear-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-200/50 p-8">
+                  <h4 className="font-bold text-2xl text-gray-900 mb-6 flex items-center gap-2">
+                    <Plus className="w-6 h-6 text-orange-600" />
+                    Add New Food Item
+                  </h4>
+                  
+                  <div className="space-y-6">
+                    {/* Row 1: Basic Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Food Item Name *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Apple, Chicken Breast, Pasta"
+                          value={newItem.itemName}
+                          onChange={(e) => setNewItem({ ...newItem, itemName: e.target.value })}
+                          className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400 font-medium"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Quantity *</label>
+                        <input
+                          type="number"
+                          placeholder="e.g., 100"
+                          value={newItem.quantity}
+                          onChange={(e) => setNewItem({ ...newItem, quantity: parseFloat(e.target.value) || 0 })}
+                          className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400 font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 2: Unit & Category */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Unit *</label>
+                        <select
+                          value={newItem.unit}
+                          onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
+                          className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 font-medium"
+                        >
+                          <option value="grams">Grams (g)</option>
+                          <option value="pieces">Pieces</option>
+                          <option value="cups">Cups</option>
+                          <option value="servings">Servings</option>
+                          <option value="ml">Milliliters (ml)</option>
+                          <option value="tbsp">Tablespoons</option>
+                          <option value="tsp">Teaspoons</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Category *</label>
+                        <select
+                          value={newItem.category}
+                          onChange={(e) => setNewItem({ ...newItem, category: e.target.value as "fruits" | "vegetables" | "dairy" | "grains" | "protein" | "beverages" | "snacks" | "other" })}
+                          className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 font-medium"
+                        >
+                          <option value="fruits">🍎 Fruits</option>
+                          <option value="vegetables">🥕 Vegetables</option>
+                          <option value="dairy">🥛 Dairy</option>
+                          <option value="grains">🌾 Grains</option>
+                          <option value="protein">🍗 Protein</option>
+                          <option value="beverages">🥤 Beverages</option>
+                          <option value="snacks">🍿 Snacks</option>
+                          <option value="other">🍽️ Other</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Row 3: Meal Type */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Meal Type *</label>
+                      <select
+                        value={newItem.mealType}
+                        onChange={(e) => setNewItem({ ...newItem, mealType: e.target.value as "breakfast" | "lunch" | "dinner" | "snack" | "beverage" })}
+                        className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 font-medium"
+                      >
+                        <option value="breakfast">🌅 Breakfast</option>
+                        <option value="lunch">🍽️ Lunch</option>
+                        <option value="dinner">🌙 Dinner</option>
+                        <option value="snack">🍪 Snack</option>
+                        <option value="beverage">☕ Beverage</option>
+                      </select>
+                    </div>
+
+                    {/* Nutrition Facts Section */}
+                    <div className="bg-white/60 rounded-xl p-6 border-2 border-orange-100">
+                      <h5 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-orange-600" />
+                        Nutrition Information
+                      </h5>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Calories *</label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={newItem.calories || 0}
+                            onChange={(e) => setNewItem({ ...newItem, calories: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 bg-orange-50 border-2 border-orange-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 font-medium"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">kcal</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Protein</label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={newItem.protein || 0}
+                            onChange={(e) => setNewItem({ ...newItem, protein: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 bg-red-50 border-2 border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900 font-medium"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">g</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Carbs</label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={newItem.carbs || 0}
+                            onChange={(e) => setNewItem({ ...newItem, carbs: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 bg-yellow-50 border-2 border-yellow-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 text-gray-900 font-medium"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">g</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Fats</label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={newItem.fats || 0}
+                            onChange={(e) => setNewItem({ ...newItem, fats: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 bg-green-50 border-2 border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-900 font-medium"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">g</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Fiber</label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={newItem.fiber || 0}
+                            onChange={(e) => setNewItem({ ...newItem, fiber: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 bg-blue-50 border-2 border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">g</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Sugar</label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={newItem.sugar || 0}
+                            onChange={(e) => setNewItem({ ...newItem, sugar: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-4 py-2 bg-purple-50 border-2 border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 font-medium"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">g</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Notes (Optional)</label>
+                      <textarea
+                        placeholder="Add any notes about this item (e.g., brand, cooking method)..."
+                        value={newItem.notes || ''}
+                        onChange={(e) => setNewItem({ ...newItem, notes: e.target.value })}
+                        rows={3}
+                        className="w-full px-4 py-3 bg-white border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400 font-medium"
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 justify-end pt-4 border-t border-orange-200">
+                      <button
+                        onClick={() => {
+                          setShowAddForm(false);
+                          setNewItem({
+                            itemName: '',
+                            quantity: 1,
+                            unit: 'grams',
+                            category: 'other',
+                            calories: 0,
+                            protein: 0,
+                            carbs: 0,
+                            fats: 0,
+                            fiber: 0,
+                            sugar: 0,
+                            sodium: 0,
+                            mealType: 'snack',
+                            notes: '',
+                          });
+                        }}
+                        className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-all duration-300 flex items-center gap-2"
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAddItem}
+                        disabled={addMutation.isPending || !newItem.itemName}
+                        className="px-6 py-3 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold rounded-xl hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Save className="w-4 h-4" />
+                        {addMutation.isPending ? 'Adding...' : 'Add Item'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -460,30 +677,103 @@ const DailyLogPage = () => {
           </div>
 
           {/* Water Intake Sidebar */}
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 shadow-lg p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Droplet className="w-5 h-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-gray-900">Water Intake</h3>
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 shadow-lg p-8">
+            <div className="flex items-center gap-2 mb-8">
+              <Droplet className="w-6 h-6 text-blue-600" />
+              <h3 className="text-xl font-bold text-gray-900">Water Intake</h3>
             </div>
-            <div className="bg-linear-to-br from-blue-100 to-cyan-100 rounded-xl p-6 mb-6 text-center">
-              <p className="text-4xl font-black text-blue-600">{dailyLog?.waterIntake || 0}</p>
-              <p className="text-sm text-gray-600 font-medium mt-2">glasses/day</p>
+
+            {/* Water Intake Display */}
+            <div className="bg-linear-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 mb-8 border-2 border-blue-200">
+              <div className="text-center mb-6">
+                <p className="text-5xl font-black text-blue-600 mb-2">{dailyLog?.waterIntake || 0}</p>
+                <p className="text-sm text-gray-600 font-medium">glasses today</p>
+                <p className="text-xs text-gray-500 mt-2">Goal: {waterIntakeGoal} glasses/day</p>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden mb-4">
+                <div
+                  className="bg-linear-to-r from-blue-500 to-cyan-500 h-full transition-all duration-300"
+                  style={{ width: `${Math.min(((dailyLog?.waterIntake || 0) / waterIntakeGoal) * 100, 100)}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-600 text-center">
+                {Math.round(((dailyLog?.waterIntake || 0) / waterIntakeGoal) * 100)}% of daily goal
+              </p>
             </div>
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((count) => (
-                <button
-                  key={count}
-                  onClick={() => handleWaterIntakeChange(count)}
-                  className={`w-full py-2 px-4 rounded-lg font-semibold transition ${
-                    dailyLog?.waterIntake === count
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+
+            {/* Visual Glasses Display */}
+            <div className="grid grid-cols-4 gap-2 mb-8">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((index) => (
+                <div
+                  key={index}
+                  onClick={() => handleWaterIntakeChange(index)}
+                  className={`cursor-pointer aspect-square rounded-lg flex items-center justify-center transition-all duration-200 transform hover:scale-110 ${
+                    (dailyLog?.waterIntake || 0) >= index
+                      ? 'bg-linear-to-br from-blue-400 to-cyan-500 text-white shadow-lg'
+                      : 'bg-blue-100 text-blue-400 hover:bg-blue-150'
                   }`}
                 >
-                  {count} glasses
-                </button>
+                  <Droplet className="w-5 h-5" />
+                </div>
               ))}
             </div>
+
+            {/* Quick Add Buttons */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleWaterIntakeChange(Math.max(0, (dailyLog?.waterIntake || 0) - 1))}
+                  disabled={waterMutation.isPending || !dailyLog?.waterIntake}
+                  className="flex-1 py-2 px-3 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  - Remove
+                </button>
+                <button
+                  onClick={() => handleWaterIntakeChange((dailyLog?.waterIntake || 0) + 1)}
+                  disabled={waterMutation.isPending || (dailyLog?.waterIntake || 0) >= 50}
+                  className="flex-1 py-2 px-3 bg-linear-to-r from-blue-500 to-cyan-500 text-white font-semibold rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  + Add Glass
+                </button>
+              </div>
+              
+              {/* Quick Set Buttons */}
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-200 mt-4">
+                <button
+                  onClick={() => handleWaterIntakeChange(4)}
+                  className="py-2 px-3 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition text-sm"
+                >
+                  Half (4)
+                </button>
+                <button
+                  onClick={() => handleWaterIntakeChange(8)}
+                  className="py-2 px-3 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition text-sm"
+                >
+                  Full (8)
+                </button>
+                <button
+                  onClick={() => handleWaterIntakeChange(12)}
+                  className="py-2 px-3 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition text-sm"
+                >
+                  Extra (12)
+                </button>
+                <button
+                  onClick={() => handleWaterIntakeChange(0)}
+                  className="py-2 px-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition text-sm"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {/* Loading State */}
+            {waterMutation.isPending && (
+              <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-lg text-center">
+                <p className="text-sm text-blue-700 font-medium">Updating water intake...</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -8,6 +8,7 @@ import { useUserInfo } from '@/lib/context/UserContext';
 import AddInventoryModal from './AddInventoryModal';
 import InventoryTable from './InventoryTable';
 import SuggestedTipsTable from './SuggestedTipsTable';
+import SuggestionsAside from './SuggestionsAside';
 import InventoryModals from './InventoryModals';
 
 interface InventoryItem {
@@ -222,7 +223,7 @@ const InventoryPage = () => {
 
     return (
         <div className="w-full h-full p-8">
-            <div className="max-w-6xl mx-auto">
+            <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -238,6 +239,10 @@ const InventoryPage = () => {
                     </button>
                 </div>
 
+                {/* Two Column Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Main Content - 2 columns */}
+                    <div className="lg:col-span-2">
                 {/* Search and Filter Bar */}
                 <div className="mb-6 space-y-4">
                     {/* Search Input */}
@@ -442,6 +447,13 @@ const InventoryPage = () => {
                 {suggestedTips && suggestedTips.length > 0 && (
                     <SuggestedTipsTable tips={suggestedTips} />
                 )}
+                    </div>
+
+                    {/* Sidebar - Suggestions */}
+                    <div className="lg:col-span-1">
+                        {suggestedTips && <SuggestionsAside tips={suggestedTips} />}
+                    </div>
+                </div>
 
                 {/* Modals */}
                 <InventoryModals
