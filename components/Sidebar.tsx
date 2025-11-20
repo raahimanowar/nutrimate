@@ -15,8 +15,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 const mainMenuItems = [
-    { label: "Profile", href: "/dashboard/profile", icon: Settings },
     { label: "Dashboard", href: "/dashboard", icon: Home },
+    { label: "Profile", href: "/dashboard/profile", icon: Settings },
     { label: "Daily Log", href: "/dashboard/dailylog", icon: Apple },
     { label: "Inventory", href: "/dashboard/inventory", icon: Package },
     { label: "Insights", href: "/dashboard/insights", icon: BarChart3 },

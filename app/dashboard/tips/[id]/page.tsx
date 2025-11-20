@@ -4,7 +4,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, AlertCircle, Calendar, Tag, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Calendar, Tag, Link as LinkIcon } from 'lucide-react';
 
 interface ResourceDetail {
   id: string;
@@ -72,6 +72,50 @@ const TipDetailPage = () => {
       month: 'long',
       day: 'numeric',
     });
+  };
+
+  const isURLDescription = (text: string): boolean => {
+    if (!text) return false;
+    return /^https?:\/\//.test(text.trim());
+  };
+
+  const extractYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
+    
+    // Remove any leading/trailing whitespace
+    url = url.trim();
+    
+    // Handle youtu.be share links with si parameter (e.g., https://youtu.be/Xx7sxWI9FNI?si=XL7Lgwt5KVLsyiGV)
+    let match = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+    if (match && match[1]) return match[1];
+    
+    // Handle youtube.com/watch with v parameter
+    match = url.match(/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/);
+    if (match && match[1]) return match[1];
+    
+    // Handle youtube.com/embed
+    match = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+    if (match && match[1]) return match[1];
+    
+    // Handle youtube.com/v/
+    match = url.match(/youtube\.com\/v\/([a-zA-Z0-9_-]{11})/);
+    if (match && match[1]) return match[1];
+    
+    // Handle youtube.com/shorts/
+    match = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/);
+    if (match && match[1]) return match[1];
+    
+    // If no match, try to extract 11-character video ID directly
+    match = url.match(/([a-zA-Z0-9_-]{11})/);
+    if (match && match[1]) {
+      // Verify it looks like a video ID (not just any 11 chars)
+      const potentialId = match[1];
+      if (/^[a-zA-Z0-9_-]{11}$/.test(potentialId)) {
+        return potentialId;
+      }
+    }
+    
+    return null;
   };
 
   return (
@@ -149,35 +193,40 @@ const TipDetailPage = () => {
                   )}
                 </div>
 
-                {/* Description */}
-                <div className="prose max-w-none">
-                  <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">{resource.description}</p>
-                </div>
+                {/* Description - Only show if it's NOT a URL */}
+                {!isURLDescription(resource.description) && (
+                  <div className="prose max-w-none">
+                    <p className="text-gray-700 text-lg leading-relaxed whitespace-pre-wrap">{resource.description}</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* URL Section */}
-            {resource.url && (
+            {/* Content Section - Video ONLY if description is a URL */}
+            {resource.description && isURLDescription(resource.description) && extractYouTubeVideoId(resource.description) && (
               <div className="relative bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 shadow-lg overflow-hidden">
                 <div className="absolute inset-0 bg-linear-to-br from-orange-50/30 via-transparent to-amber-50/30 pointer-events-none"></div>
                 <div className="relative p-6 sm:p-8">
                   <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <ExternalLink className="w-5 h-5 text-orange-600" />
-                    External Resource
+                    <span className="text-2xl">🎥</span>
+                    Watch Video
                   </h2>
-                  <a
-                    href={resource.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:-translate-y-0.5"
-                  >
-                    Visit Resource
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                  <p className="text-sm text-gray-600 mt-4 break-all">{resource.url}</p>
+                  <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-lg bg-black">
+                    <iframe
+                      className="w-full h-full"
+                      src={`https://www.youtube.com/embed/${extractYouTubeVideoId(resource.description)}`}
+                      title={resource.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 mt-4 break-all">
+                    <span className="font-semibold">Video Source:</span> {resource.description}
+                  </p>
                 </div>
               </div>
-            )}
+            )} 
 
             
 

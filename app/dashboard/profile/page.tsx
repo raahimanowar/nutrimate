@@ -190,8 +190,8 @@ const ProfilePage = () => {
     }
 
     // Validate file type
-    if (!file.type.startsWith('img/')) {
-      alert('Please select a valid img file');
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file');
       return;
     }
 
@@ -202,14 +202,17 @@ const ProfilePage = () => {
       if (!token) throw new Error('No authentication token');
 
       const formDataForUpload = new FormData();
-      formDataForUpload.append('img', file);
+      formDataForUpload.append('image', file);
 
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/profile-picture`, formDataForUpload, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/upload/profile-picture`,
+        formDataForUpload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       // Update form data with the new profile picture URL
       setFormData((prev) => ({
