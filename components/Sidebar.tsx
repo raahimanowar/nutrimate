@@ -11,6 +11,8 @@ import {
     BarChart3,
     Users,
     Settings,
+    Image,
+    Boxes,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -19,6 +21,8 @@ const mainMenuItems = [
     { label: "Profile", href: "/dashboard/profile", icon: Settings },
     { label: "Daily Log", href: "/dashboard/dailylog", icon: Apple },
     { label: "Inventory", href: "/dashboard/inventory", icon: Package },
+    { label: "Food Inventory", href: "/dashboard/foodinventory", icon: Boxes },
+    { label: "Image Processing", href: "/dashboard/imageprocess", icon: Image },
     { label: "Tips & Resources", href: "/dashboard/tips", icon: Lightbulb },
 ];
 

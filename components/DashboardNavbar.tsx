@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Bell, Search, User, ChevronDown, LogOut, Settings, HelpCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -75,8 +76,18 @@ const DashboardNavbar = () => {
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all group"
           >
-            <div className="w-8 h-8 rounded-full bg-linear-to-br from-orange-500 to-amber-600 flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-full bg-linear-to-br from-orange-500 to-amber-600 flex items-center justify-center overflow-hidden">
+              {user?.profilePic ? (
+                <img 
+                  src={user.profilePic} 
+                  alt="Profile" 
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-4 h-4 text-white" />
+              )}
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-sm font-medium text-gray-900">{user?.username || 'User'}</p>
@@ -94,7 +105,10 @@ const DashboardNavbar = () => {
               </div>
               <div className="py-2">
                 <button 
-                  onClick={() => router.push('/dashboard/profile')}
+                  onClick={() => {
+                    router.push('/dashboard/profile');
+                    setIsProfileOpen(false);
+                  }}
                   className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
                 >
                   <Settings className="w-4 h-4" />
