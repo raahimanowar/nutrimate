@@ -702,103 +702,64 @@ const DailyLogPage = () => {
           </div>
 
           {/* Water Intake Sidebar */}
-          <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 shadow-lg p-8">
-            <div className="flex items-center gap-2 mb-8">
-              <Droplet className="w-6 h-6 text-blue-600" />
-              <h3 className="text-xl font-bold text-gray-900">Water Intake</h3>
+          <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-6">
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-6">
+              <Droplet className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-bold text-gray-900">Hydration</h3>
             </div>
 
-            {/* Water Intake Display */}
-            <div className="bg-linear-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 mb-8 border-2 border-blue-200">
-              <div className="text-center mb-6">
-                <p className="text-5xl font-black text-blue-600 mb-2">{dailyLog?.waterIntake || 0}</p>
-                <p className="text-sm text-gray-600 font-medium">glasses today</p>
-                <p className="text-xs text-gray-500 mt-2">Goal: {waterIntakeGoal} glasses/day</p>
+            {/* Status Display */}
+            <div className="bg-blue-50 rounded-lg p-5 mb-6 border border-blue-100">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-3xl font-bold text-blue-600">{dailyLog?.waterIntake || 0}</p>
+                <p className="text-xs text-gray-600 font-medium">Goal: {waterIntakeGoal}</p>
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full bg-blue-200 rounded-full h-3 overflow-hidden mb-4">
+              <div className="w-full bg-blue-100 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-linear-to-r from-blue-500 to-cyan-500 h-full transition-all duration-300"
+                  className="bg-blue-500 h-full transition-all duration-300"
                   style={{ width: `${Math.min(((dailyLog?.waterIntake || 0) / waterIntakeGoal) * 100, 100)}%` }}
                 ></div>
               </div>
-              <p className="text-xs text-gray-600 text-center">
-                {Math.round(((dailyLog?.waterIntake || 0) / waterIntakeGoal) * 100)}% of daily goal
-              </p>
             </div>
 
-            {/* Visual Glasses Display */}
-            <div className="grid grid-cols-4 gap-2 mb-8">
+            {/* Toggle Buttons - Yes/No Style */}
+            <div className="flex gap-3 mb-6">
+              <button
+                onClick={() => handleWaterIntakeChange((dailyLog?.waterIntake || 0) + 1)}
+                disabled={waterMutation.isPending || (dailyLog?.waterIntake || 0) >= 50}
+                className="flex-1 py-3 px-4 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Yes, Drank
+              </button>
+              <button
+                onClick={() => handleWaterIntakeChange(Math.max(0, (dailyLog?.waterIntake || 0) - 1))}
+                disabled={waterMutation.isPending || !dailyLog?.waterIntake}
+                className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Undo
+              </button>
+            </div>
+
+            {/* Glass Indicators */}
+            <div className="grid grid-cols-4 gap-2">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((index) => (
-                <div
+                <button
                   key={index}
                   onClick={() => handleWaterIntakeChange(index)}
-                  className={`cursor-pointer aspect-square rounded-lg flex items-center justify-center transition-all duration-200 transform hover:scale-110 ${
+                  disabled={waterMutation.isPending}
+                  className={`aspect-square rounded-lg flex items-center justify-center transition-all duration-200 ${
                     (dailyLog?.waterIntake || 0) >= index
-                      ? 'bg-linear-to-br from-blue-400 to-cyan-500 text-white shadow-lg'
-                      : 'bg-blue-100 text-blue-400 hover:bg-blue-150'
-                  }`}
+                      ? 'bg-blue-500 text-white shadow-sm'
+                      : 'bg-blue-100 text-blue-400 hover:bg-blue-200'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  <Droplet className="w-5 h-5" />
-                </div>
+                  <Droplet className="w-4 h-4 fill-current" />
+                </button>
               ))}
             </div>
-
-            {/* Quick Add Buttons */}
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleWaterIntakeChange(Math.max(0, (dailyLog?.waterIntake || 0) - 1))}
-                  disabled={waterMutation.isPending || !dailyLog?.waterIntake}
-                  className="flex-1 py-2 px-3 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  - Remove
-                </button>
-                <button
-                  onClick={() => handleWaterIntakeChange((dailyLog?.waterIntake || 0) + 1)}
-                  disabled={waterMutation.isPending || (dailyLog?.waterIntake || 0) >= 50}
-                  className="flex-1 py-2 px-3 bg-linear-to-r from-blue-500 to-cyan-500 text-white font-semibold rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  + Add Glass
-                </button>
-              </div>
-              
-              {/* Quick Set Buttons */}
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-blue-200 mt-4">
-                <button
-                  onClick={() => handleWaterIntakeChange(4)}
-                  className="py-2 px-3 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition text-sm"
-                >
-                  Half (4)
-                </button>
-                <button
-                  onClick={() => handleWaterIntakeChange(8)}
-                  className="py-2 px-3 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition text-sm"
-                >
-                  Full (8)
-                </button>
-                <button
-                  onClick={() => handleWaterIntakeChange(12)}
-                  className="py-2 px-3 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition text-sm"
-                >
-                  Extra (12)
-                </button>
-                <button
-                  onClick={() => handleWaterIntakeChange(0)}
-                  className="py-2 px-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition text-sm"
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-
-            {/* Loading State */}
-            {waterMutation.isPending && (
-              <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-lg text-center">
-                <p className="text-sm text-blue-700 font-medium">Updating water intake...</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
