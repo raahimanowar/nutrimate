@@ -11,7 +11,6 @@ import {
     BarChart3,
     Users,
     Settings,
-    Leaf,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -30,7 +29,7 @@ const communityItems = [
 ];
 
 // const bottomMenuItems = [
-    
+
 // ];
 
 const Sidebar = () => {
@@ -45,12 +44,9 @@ const Sidebar = () => {
 
             {/* LOGO SECTION */}
             <div className="pt-4 space-y-2.5 sticky top-0 bg-white items-center justify-between px-2">
-                <Link href="/dashboard" className="flex items-center gap-2 group">
-                    <div className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg group-hover:shadow-orange-500/50 transition-all">
-                        <Leaf className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                        <p className="text-lg font-black text-gray-900">NutriMATE</p>
+                <Link href="/" className="group flex items-center gap-1">
+                    <div className="text-2xl font-black italic bg-linear-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">
+                        NutriMATE
                     </div>
                 </Link>
                 <Separator />

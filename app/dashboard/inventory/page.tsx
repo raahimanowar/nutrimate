@@ -1,22 +1,14 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Plus, Trash2, Eye, Pencil, Search, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, ArrowUpDown } from 'lucide-react';
 import { useUserInfo } from '@/lib/context/UserContext';
 import AddInventoryModal from './AddInventoryModal';
-import {
-    Apple,
-    Leaf,
-    Milk,
-    Wheat,
-    Drumstick,
-    Coffee,
-    Cookie,
-    Package
-} from "lucide-react";
+import InventoryTable from './InventoryTable';
+import SuggestedTipsTable from './SuggestedTipsTable';
+import InventoryModals from './InventoryModals';
 
 interface InventoryItem {
     _id: string;
@@ -27,6 +19,16 @@ interface InventoryItem {
     costPerUnit: number;
     createdAt: string;
     updatedAt: string;
+}
+
+interface SuggestedTip {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    type: 'article' | 'video' | 'guide' | 'tip';
+    url?: string;
+    createdAt: string;
 }
 
 interface DeleteConfirmModal {
@@ -71,21 +73,10 @@ const InventoryPage = () => {
         sortBy: 'createdAt',
         sortOrder: 'desc',
     });
-    const router = useRouter();
+
     const { user } = useUserInfo();
     const queryClient = useQueryClient();
-
-    const categoryIcons: Record<string, React.ReactElement> = {
-        fruits: <Apple className="w-6 h-6 text-orange-600" />,
-        vegetables: <Leaf className="w-6 h-6 text-green-600" />,
-        dairy: <Milk className="w-6 h-6 text-blue-600" />,
-        grains: <Wheat className="w-6 h-6 text-amber-600" />,
-        protein: <Drumstick className="w-6 h-6 text-red-600" />,
-        beverages: <Coffee className="w-6 h-6 text-brown-600" />,
-        snacks: <Cookie className="w-6 h-6 text-yellow-600" />,
-        other: <Package className="w-6 h-6 text-gray-600" />
-    };
-
+    const categories = ['fruits', 'vegetables', 'dairy', 'grains', 'protein', 'beverages', 'snacks', 'other'];
 
     // Fetch inventory items
     const { data: inventoryData, isLoading, error } = useQuery({
@@ -113,6 +104,38 @@ const InventoryPage = () => {
             return response.data.data as InventoryItem[];
         },
         enabled: !!user,
+    });
+
+    // Get unique categories from inventory
+    const uniqueCategories = React.useMemo(() => {
+        if (!inventoryData) return [];
+        return [...new Set(inventoryData.map(item => item.category))];
+    }, [inventoryData]);
+
+    // Fetch suggested tips based on inventory categories
+    const { data: suggestedTips } = useQuery({
+        queryKey: ['suggestedTips', uniqueCategories],
+        queryFn: async () => {
+            if (uniqueCategories.length === 0) return [];
+            const token = localStorage.getItem('authToken');
+            if (!token) throw new Error('No authentication token');
+
+            const tipsPromises = uniqueCategories.map(category =>
+                axios.get(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/resources?category=${category}&limit=5`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
+                )
+            );
+
+            const responses = await Promise.all(tipsPromises);
+            const allTips = responses.flatMap(res => res.data.data || []);
+            return Array.from(new Map(allTips.map(tip => [tip.id, tip])).values()).slice(0, 10) as SuggestedTip[];
+        },
+        enabled: !!user && uniqueCategories.length > 0,
     });
 
     // Add item mutation
@@ -197,10 +220,8 @@ const InventoryPage = () => {
         },
     });
 
-    const categories = ['fruits', 'vegetables', 'dairy', 'grains', 'protein', 'beverages', 'snacks', 'other'];
-
     return (
-        <div className="w-full h-full p-8 ">
+        <div className="w-full h-full p-8">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
@@ -393,101 +414,15 @@ const InventoryPage = () => {
                 {!isLoading && !error && (
                     <>
                         {inventoryData && inventoryData.length > 0 ? (
-                            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                                <table className="w-full border-collapse">
-                                    <thead>
-                                        <tr className="bg-linear-to-r from-orange-500 to-amber-500 text-white">
-                                            <th className="px-6 py-3 text-left font-semibold">Category</th>
-                                            <th className="px-6 py-3 text-left font-semibold">Item Name</th>
-                                            <th className="px-6 py-3 text-left font-semibold">Expiration Date</th>
-                                            <th className="px-6 py-3 text-left font-semibold">Cost Per Unit</th>
-                                            <th className="px-6 py-3 text-center font-semibold">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {inventoryData.map((item, index) => {
-                                            const expiryDate = item.expirationDate ? new Date(item.expirationDate) : null;
-                                            const today = new Date();
-                                            today.setHours(0, 0, 0, 0);
-                                            const daysLeft = expiryDate ? Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
-                                            const isExpired = daysLeft !== null && daysLeft < 0;
-                                            const isExpiringSoon = daysLeft !== null && daysLeft <= 3 && daysLeft >= 0;
-
-                                            return (
-                                                <tr
-                                                    key={item._id}
-                                                    className={`border-b border-gray-200 transition-colors ${
-                                                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                                    } ${isExpired ? 'bg-red-50' : ''} ${isExpiringSoon && !isExpired ? 'bg-yellow-50' : ''} hover:bg-orange-50`}
-                                                >
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2">
-                                                            {categoryIcons[item.category.toLowerCase()] || categoryIcons["other"]}
-                                                            <span className="font-medium text-gray-900 capitalize">{item.category}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="font-semibold text-gray-900">{item.itemName}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div>
-                                                            <p className="text-gray-900">
-                                                                {item.expirationDate 
-                                                                    ? new Date(item.expirationDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                                                                    : 'N/A'}
-                                                            </p>
-                                                            {daysLeft !== null && (
-                                                                <p className={`text-sm font-medium ${
-                                                                    isExpired ? 'text-red-600' : isExpiringSoon ? 'text-orange-600' : 'text-green-600'
-                                                                }`}>
-                                                                    {isExpired ? `Expired ${Math.abs(daysLeft)} days ago` : `${daysLeft} days left`}
-                                                                </p>
-                                                            )}
-                                                            {!item.hasExpiration && <p className="text-sm text-gray-500">No expiration</p>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-600">
-                                                        ${item.costPerUnit.toFixed(2)}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <button
-                                                                onClick={() => router.push(`/dashboard/inventory/${item._id}`)}
-                                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                                title="View details"
-                                                            >
-                                                                <Eye className="w-5 h-5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setEditModal({ isOpen: true, item })}
-                                                                disabled={updateItemMutation.isPending}
-                                                                className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
-                                                                title="Edit item"
-                                                            >
-                                                                <Pencil className="w-5 h-5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() =>
-                                                                    setDeleteConfirm({
-                                                                        isOpen: true,
-                                                                        itemId: item._id,
-                                                                        itemName: item.itemName,
-                                                                    })
-                                                                }
-                                                                disabled={deleteItemMutation.isPending}
-                                                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                                                                title="Delete item"
-                                                            >
-                                                                <Trash2 className="w-5 h-5" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <InventoryTable
+                                items={inventoryData}
+                                onEdit={(item) => setEditModal({ isOpen: true, item })}
+                                onDelete={(itemId, itemName) =>
+                                    setDeleteConfirm({ isOpen: true, itemId, itemName })
+                                }
+                                updateMutationPending={updateItemMutation.isPending}
+                                deleteMutationPending={deleteItemMutation.isPending}
+                            />
                         ) : (
                             <div className="bg-white rounded-lg shadow-md p-12 text-center">
                                 <p className="text-gray-600 text-lg mb-4">No items in your inventory yet</p>
@@ -503,154 +438,28 @@ const InventoryPage = () => {
                     </>
                 )}
 
-                {/* Edit Modal */}
-                {editModal.isOpen && editModal.item && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Edit Item</h2>
-                            <form
-                                onSubmit={(e) => {
-                                    e.preventDefault();
-                                    const formData = new FormData(e.currentTarget);
-                                    updateItemMutation.mutate({
-                                        itemId: editModal.item!._id,
-                                        itemName: formData.get('itemName') as string,
-                                        category: formData.get('category') as string,
-                                        expirationDate: (formData.get('expirationDate') as string) || null,
-                                        hasExpiration: formData.get('hasExpiration') === 'on',
-                                        costPerUnit: parseFloat(formData.get('costPerUnit') as string),
-                                    });
-                                }}
-                                className="space-y-4"
-                            >
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
-                                    <input
-                                        type="text"
-                                        name="itemName"
-                                        defaultValue={editModal.item.itemName}
-                                        required
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                                    <select
-                                        name="category"
-                                        defaultValue={editModal.item.category}
-                                        required
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                    >
-                                        {categories.map((cat) => (
-                                            <option key={cat} value={cat} className="capitalize">
-                                                {cat}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            name="hasExpiration"
-                                            defaultChecked={editModal.item.hasExpiration}
-                                            className="w-4 h-4 rounded accent-orange-500"
-                                        />
-                                        Has Expiration Date
-                                    </label>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Expiration Date</label>
-                                    <input
-                                        type="date"
-                                        name="expirationDate"
-                                        defaultValue={editModal.item.expirationDate ? editModal.item.expirationDate.split('T')[0] : ''}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Cost Per Unit</label>
-                                    <input
-                                        type="number"
-                                        name="costPerUnit"
-                                        defaultValue={editModal.item.costPerUnit}
-                                        min="0"
-                                        step="0.01"
-                                        required
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                    />
-                                </div>
-
-                                <div className="flex gap-3 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditModal({ isOpen: false, item: null })}
-                                        disabled={updateItemMutation.isPending}
-                                        className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={updateItemMutation.isPending}
-                                        className="flex-1 px-4 py-2 bg-linear-to-r from-orange-500 to-amber-600 text-white rounded-lg hover:shadow-lg hover:shadow-orange-500/40 transition-all duration-300 font-medium disabled:opacity-50"
-                                    >
-                                        {updateItemMutation.isPending ? 'Updating...' : 'Update'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+                {/* Suggested Tips Section */}
+                {suggestedTips && suggestedTips.length > 0 && (
+                    <SuggestedTipsTable tips={suggestedTips} />
                 )}
 
-                {/* Delete Confirmation Modal */}
-                {deleteConfirm.isOpen && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <div className="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 p-6">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Delete Item?</h2>
-                            <p className="text-gray-600 mb-6">
-                                Are you sure you want to delete <span className="font-semibold">{deleteConfirm.itemName}</span>? This
-                                action cannot be undone.
-                            </p>
-
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() =>
-                                        setDeleteConfirm({
-                                            isOpen: false,
-                                            itemId: null,
-                                            itemName: '',
-                                        })
-                                    }
-                                    disabled={deleteItemMutation.isPending}
-                                    className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (deleteConfirm.itemId) {
-                                            deleteItemMutation.mutate(deleteConfirm.itemId);
-                                            setDeleteConfirm({
-                                                isOpen: false,
-                                                itemId: null,
-                                                itemName: '',
-                                            });
-                                        }
-                                    }}
-                                    disabled={deleteItemMutation.isPending}
-                                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50"
-                                >
-                                    {deleteItemMutation.isPending ? 'Deleting...' : 'Delete'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                {/* Modals */}
+                <InventoryModals
+                    editModal={editModal}
+                    onEditClose={() => setEditModal({ isOpen: false, item: null })}
+                    onEditSubmit={(data) => updateItemMutation.mutate(data)}
+                    editLoading={updateItemMutation.isPending}
+                    deleteConfirm={deleteConfirm}
+                    onDeleteClose={() =>
+                        setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' })
+                    }
+                    onDeleteConfirm={(itemId) => {
+                        deleteItemMutation.mutate(itemId);
+                        setDeleteConfirm({ isOpen: false, itemId: null, itemName: '' });
+                    }}
+                    deleteLoading={deleteItemMutation.isPending}
+                    categories={categories}
+                />
             </div>
         </div>
     );
