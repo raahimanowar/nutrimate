@@ -53,7 +53,7 @@ A clean and intuitive dashboard gives users a quick snapshot of:
 - **Next.js**
 - **Tailwind**
 - **Shadcn**
-- **Tanstack**
+- **Tanstack query**
 
 ## Getting Started (Local Development)
 
@@ -74,7 +74,7 @@ npm install
 
 ### 3. Set up environment variables
 
-Create a `.env` file in the project root based on `.env.example`.
+Create a `.env.local` file in the project root based on `.env.example`.
 
 ### 4. Start the development server
 
