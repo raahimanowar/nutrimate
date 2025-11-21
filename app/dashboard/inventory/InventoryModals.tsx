@@ -9,6 +9,10 @@ interface InventoryItem {
     expirationDate: string | null;
     hasExpiration: boolean;
     costPerUnit: number;
+    quantity?: number;
+    unit?: string;
+    baseQuantity?: number;
+    baseUnit?: string;
 }
 
 interface InventoryModalsProps {
@@ -24,6 +28,8 @@ interface InventoryModalsProps {
         expirationDate: string | null;
         hasExpiration: boolean;
         costPerUnit: number;
+        quantity?: number;
+        unit?: string;
     }) => void;
     editLoading: boolean;
 
@@ -68,6 +74,8 @@ const InventoryModals: React.FC<InventoryModalsProps> = ({
                                     expirationDate: (formData.get('expirationDate') as string) || null,
                                     hasExpiration: formData.get('hasExpiration') === 'on',
                                     costPerUnit: parseFloat(formData.get('costPerUnit') as string),
+                                    quantity: parseFloat(formData.get('quantity') as string) || 1,
+                                    unit: (formData.get('unit') as string) || 'pieces',
                                 });
                             }}
                             className="space-y-4"
@@ -132,6 +140,35 @@ const InventoryModals: React.FC<InventoryModalsProps> = ({
                                     required
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                                <input
+                                    type="number"
+                                    name="quantity"
+                                    defaultValue={editModal.item.quantity || 1}
+                                    min="0"
+                                    step="0.1"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                                <select
+                                    name="unit"
+                                    defaultValue={editModal.item.unit || 'pieces'}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                >
+                                    <option value="pieces">Pieces</option>
+                                    <option value="g">Grams (g)</option>
+                                    <option value="kg">Kilograms (kg)</option>
+                                    <option value="ml">Milliliters (ml)</option>
+                                    <option value="l">Liters (L)</option>
+                                    <option value="oz">Ounces (oz)</option>
+                                    <option value="lb">Pounds (lb)</option>
+                                </select>
                             </div>
 
                             <div className="flex gap-3 pt-4">

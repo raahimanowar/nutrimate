@@ -32,10 +32,14 @@ const Banner = () => {
 
                         <div className="space-y-6">
                             <h1 className="text-5xl sm:text-7xl font-black text-gray-900 leading-tight">
-                                Smart tracking,
+                                Track Smarter,
                                 <br />
-                                <span className="bg-linear-to-r from-orange-300 to-amber-600 bg-clip-text text-transparent">
-                                    sustainable living.
+                                <span className="bg-linear-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent">
+                                    Waste Less,
+                                </span> 
+                                <br />
+                                <span className="bg-linear-to-r from-orange-300 to-amber-600 bg-clip-text text-6xl text-transparent">
+                                     Live Better.
                                 </span>
                             </h1>
                             <p className="text-lg text-gray-700 max-w-lg leading-relaxed">

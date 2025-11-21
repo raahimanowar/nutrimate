@@ -21,6 +21,10 @@ interface InventoryItem {
     expirationDate: string | null;
     hasExpiration: boolean;
     costPerUnit: number;
+    quantity?: number;
+    unit?: string;
+    baseQuantity?: number;
+    baseUnit?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -54,15 +58,16 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="w-full border-collapse">
+        <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+            <table className="w-full border-collapse min-w-full">
                 <thead>
                     <tr className="bg-linear-to-r from-orange-500 to-amber-500 text-white">
-                        <th className="px-6 py-3 text-left font-semibold">Category</th>
-                        <th className="px-6 py-3 text-left font-semibold">Item Name</th>
-                        <th className="px-6 py-3 text-left font-semibold">Expiration Date</th>
-                        <th className="px-6 py-3 text-left font-semibold">Cost Per Unit</th>
-                        <th className="px-6 py-3 text-center font-semibold">Actions</th>
+                        <th className="px-4 py-3 text-left font-semibold min-w-[120px]">Category</th>
+                        <th className="px-4 py-3 text-left font-semibold min-w-[140px]">Item Name</th>
+                        <th className="px-4 py-3 text-left font-semibold min-w-[110px]">Quantity</th>
+                        <th className="px-4 py-3 text-left font-semibold min-w-[140px]">Expiration Date</th>
+                        <th className="px-4 py-3 text-left font-semibold min-w-[110px]">Cost Per Unit</th>
+                        <th className="px-4 py-3 text-center font-semibold min-w-[100px]">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -81,16 +86,22 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                     index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                                 } ${isExpired ? 'bg-red-50' : ''} ${isExpiringSoon && !isExpired ? 'bg-yellow-50' : ''} hover:bg-orange-50`}
                             >
-                                <td className="px-6 py-4">
+                                <td className="px-4 py-4 whitespace-normal">
                                     <div className="flex items-center gap-2">
                                         {categoryIcons[item.category.toLowerCase()] || categoryIcons["other"]}
-                                        <span className="font-medium text-gray-900 capitalize">{item.category}</span>
+                                        <span className="font-medium text-gray-900 capitalize word-break">{item.category}</span>
                                     </div>
                                 </td>
-                                <td className="px-6 py-4">
-                                    <span className="font-semibold text-gray-900">{item.itemName}</span>
+                                <td className="px-4 py-4">
+                                    <span className="font-semibold text-gray-900 break-all">{item.itemName}</span>
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-4 py-4">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium text-gray-900">{(item.quantity || 1).toFixed(1)}</span>
+                                        <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded whitespace-nowrap">{item.unit || 'pieces'}</span>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-4">
                                     <div>
                                         <p className="text-gray-900">
                                             {item.expirationDate
@@ -107,18 +118,11 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                                         {!item.hasExpiration && <p className="text-sm text-gray-500">No expiration</p>}
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-gray-600">
-                                    ${item.costPerUnit.toFixed(2)}
+                                <td className="px-4 py-4 text-gray-600">
+                                    tk {item.costPerUnit.toFixed(2)}
                                 </td>
-                                <td className="px-6 py-4">
+                                <td className="px-4 py-4">
                                     <div className="flex items-center justify-center gap-2">
-                                        <button
-                                            onClick={() => router.push(`/dashboard/inventory/${item._id}`)}
-                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                            title="View details"
-                                        >
-                                            <Eye className="w-5 h-5" />
-                                        </button>
                                         <button
                                             onClick={() => onEdit(item)}
                                             disabled={updateMutationPending}

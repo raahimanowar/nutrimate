@@ -36,6 +36,9 @@ const ResourcesModal: React.FC<ResourcesModalProps> = ({ isOpen, onClose, catego
       return res.data;
     },
     enabled: !!category && isOpen,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: 2,
   });
 
   const resources = response?.data || [];

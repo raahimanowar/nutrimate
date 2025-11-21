@@ -13,7 +13,7 @@ interface Community {
   name: string;
   location: string;
   description: string;
-  admin: string;
+  admin: string | { _id: string; username?: string; email?: string };
   membersCount: number;
   isMember: boolean;
   isAdmin: boolean;
@@ -89,6 +89,8 @@ const CommunityPage = () => {
     queryKey: ['communities'],
     queryFn: getAllCommunitiesAPI,
     staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    retry: 2,
   });
 
   // Create community mutation with optimistic updates
@@ -106,6 +108,7 @@ const CommunityPage = () => {
         const optimisticCommunity: Community = {
           _id: `temp-${Date.now()}`,
           ...newCommunity,
+          admin: localStorage.getItem('userId') || '',
           membersCount: 1,
           isMember: true,
           isAdmin: true,

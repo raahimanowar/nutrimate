@@ -1,5 +1,5 @@
 'use client'
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import CommunityAnim from "./communityanim";
 
 const TrustedCount = () => {
@@ -12,27 +12,54 @@ const TrustedCount = () => {
     ], []);
 
     const [counts, setCounts] = useState(stats.map(() => 0));
+    const [hasAnimated, setHasAnimated] = useState(false);
+    const sectionRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const intervals = stats.map((stat, index) => {
-            const increment = stat.value / 100; // speed
-            return setInterval(() => {
-                setCounts((prev) => {
-                    const updated = [...prev];
-                    if (updated[index] < stat.value) {
-                        updated[index] = Math.ceil(updated[index] + increment);
-                    }
-                    return updated;
-                });
-            }, 20);
-        });
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting && !hasAnimated) {
+                    setHasAnimated(true);
+                    
+                    const intervals = stats.map((stat, index) => {
+                        const increment = stat.value / 60; // slower animation for better effect
+                        return setInterval(() => {
+                            setCounts((prev) => {
+                                const updated = [...prev];
+                                if (updated[index] < stat.value) {
+                                    updated[index] = Math.min(
+                                        Math.ceil(updated[index] + increment),
+                                        stat.value
+                                    );
+                                }
+                                return updated;
+                            });
+                        }, 30);
+                    });
 
-        return () => intervals.forEach((i) => clearInterval(i));
-    }, [stats]);
+                    return () => intervals.forEach((i) => clearInterval(i));
+                }
+            },
+            { threshold: 0.2 }
+        );
+
+        const current = sectionRef.current;
+        if (current) {
+            observer.observe(current);
+        }
+
+        return () => {
+            if (current) {
+                observer.unobserve(current);
+            }
+        };
+    }, [hasAnimated, stats]);
 
     return (
-        <section className="relative py-32 px-4 overflow-hidden
-            bg-linear-to-b from-orange-50 via-amber-50 to-orange-100">
+        <section 
+            ref={sectionRef}
+            className="relative py-32 px-4 overflow-hidden bg-linear-to-b from-orange-50 via-amber-50 to-orange-100"
+        >
 
             {/* Background Decorative Blurs */}
             <div className="absolute top-0 right-20 w-[450px] h-[450px] rounded-full 

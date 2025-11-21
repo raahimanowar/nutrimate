@@ -44,6 +44,7 @@ const FoodInventoryPage = () => {
     queryFn: () => fetchFoodInventory(selectedCategory || undefined),
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    retry: 2,
   });
 
   const items = useMemo(() => inventoryData?.items || [], [inventoryData?.items]);
@@ -95,6 +96,9 @@ const FoodInventoryPage = () => {
     return { label: 'Fresh', color: 'bg-green-50 border-green-200 text-green-700' };
   };
 
+  console.log(filteredItems);
+  
+
   if (isLoading) {
     return <LoadingSpinner message="Loading Food Inventory..." fullScreen />;
   }
@@ -138,7 +142,7 @@ const FoodInventoryPage = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 font-medium">Total Value</p>
-                <p className="text-3xl font-black text-green-600">${stats.totalValue.toFixed(2)}</p>
+                <p className="text-3xl font-black text-green-600">tk {stats.totalValue.toFixed(2)}</p>
               </div>
               <DollarSign className="w-12 h-12 text-green-200" />
             </div>
@@ -224,14 +228,14 @@ const FoodInventoryPage = () => {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500 font-medium">Cost/Unit</p>
-                      <p className="text-2xl font-black text-amber-600">${item.costPerUnit.toFixed(2)}</p>
+                      <p className="text-2xl font-black text-amber-600">tk {item.costPerUnit.toFixed(2)}</p>
                     </div>
                   </div>
 
                   {/* Total Value */}
                   <div className="bg-linear-to-r from-orange-50 to-amber-50 rounded-lg p-3 border-2 border-orange-100">
                     <p className="text-xs text-gray-600 font-medium">Total Value</p>
-                    <p className="text-2xl font-black text-orange-600">${(item.quantity * item.costPerUnit).toFixed(2)}</p>
+                    <p className="text-2xl font-black text-orange-600">tk {(item.quantity * item.costPerUnit).toFixed(2)}</p>
                   </div>
                 </div>
               );

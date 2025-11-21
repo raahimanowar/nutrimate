@@ -12,9 +12,31 @@ export interface UserInfo {
   weight?: number;
   dateOfBirth?: string;
   profilePic?: string;
+  householdSize?: number;
   address?: {
     country?: string;
     city?: string;
+  };
+  budgetPreferences?: {
+    monthlyBudget?: number;
+    spendingCategories?: {
+      groceries?: number;
+      diningOut?: number;
+      supplements?: number;
+      other?: number;
+    };
+  };
+  dietaryNeeds?: {
+    dietType?: 'balanced' | 'plantBased' | 'lowCarb' | 'highProtein';
+    allergies?: string[];
+    caloriesPerDay?: number;
+    macroTargets?: {
+      protein?: number;
+      carbs?: number;
+      fats?: number;
+    };
+    waterIntakeGoal?: number;
+    avoidIngredients?: string[];
   };
 }
 

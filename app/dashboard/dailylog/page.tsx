@@ -7,6 +7,19 @@ import { Plus, Trash2, X, Calendar, Droplet, TrendingUp, AlertCircle, CheckCircl
 import toast, { Toaster } from 'react-hot-toast';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
+interface InventoryItem {
+  _id: string;
+  itemName: string;
+  category: string;
+  expirationDate: string | null;
+  hasExpiration: boolean;
+  costPerUnit: number;
+  quantity?: number;
+  unit?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface DailyLogItem {
   _id: string;
   itemName: string;
@@ -110,10 +123,27 @@ const updateWaterIntake = async (data: { date: string; waterIntake: number }): P
   return response.data.data;
 };
 
+const getInventory = async (): Promise<InventoryItem[]> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) throw new Error('No authentication token');
+
+  const response = await axios.get(`${API_BASE}/api/inventory`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  return response.data.data || [];
+};
+
 const DailyLogPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [addMode, setAddMode] = useState<'inventory' | 'manual'>('inventory'); // inventory or manual
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
+  const [consumeQuantity, setConsumeQuantity] = useState(1);
+  const [consumeMealType, setConsumeMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage'>('snack');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [newItem, setNewItem] = useState<Omit<DailyLogItem, '_id'>>({
     itemName: '',
     quantity: 1,
@@ -137,6 +167,24 @@ const DailyLogPage = () => {
     queryKey: ['userProfile'],
     queryFn: () => getUserProfile(),
     staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 120, // 2 hours
+    retry: 2,
+  });
+
+  // Fetch inventory items
+  const { data: inventoryItems = [] } = useQuery<InventoryItem[]>({
+    queryKey: ['inventory'],
+    queryFn: () => getInventory(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 15, // 15 minutes
+    retry: 2,
+  });
+
+  // Filter inventory items based on category and search
+  const filteredInventoryItems = inventoryItems.filter((item) => {
+    const categoryMatch = selectedCategory === 'all' || item.category === selectedCategory;
+    const searchMatch = searchQuery === '' || item.itemName.toLowerCase().includes(searchQuery.toLowerCase());
+    return categoryMatch && searchMatch;
   });
 
   const waterIntakeGoal = userProfile?.dietaryNeeds?.waterIntakeGoal || 8;
@@ -145,6 +193,9 @@ const DailyLogPage = () => {
   const { data: dailyLog, isLoading, error } = useQuery<DailyLog>({
     queryKey: ['dailyLog', selectedDate],
     queryFn: () => getDailyLog(selectedDate),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    retry: 2,
   });
 
   // Add item mutation
@@ -463,9 +514,9 @@ const DailyLogPage = () => {
                 </button>
               </div>
 
-              {/* Add Form - Normal inline form */}
+              {/* Add Form - Inventory Selection Mode */}
               {showAddModal && (
-                <div className="bg-linear-to-br from-orange-50 to-amber-50 rounded-2xl border-2 border-orange-200 p-6 mb-6">
+                <div className="bg-white rounded-2xl border-2 border-orange-300 p-6 mb-6 shadow-md">
                   <div className="flex items-center justify-between mb-6">
                     <h4 className="font-bold text-xl text-gray-900 flex items-center gap-2">
                       <Plus className="w-6 h-6 text-orange-600" />
@@ -474,6 +525,10 @@ const DailyLogPage = () => {
                     <button
                       onClick={() => {
                         setShowAddModal(false);
+                        setSelectedInventoryItem(null);
+                        setConsumeQuantity(1);
+                        setConsumeMealType('snack');
+                        setAddMode('inventory');
                         setNewItem({
                           itemName: '',
                           quantity: 1,
@@ -490,201 +545,237 @@ const DailyLogPage = () => {
                           notes: '',
                         });
                       }}
-                      className="p-2 hover:bg-orange-200 rounded-lg transition"
+                      className="p-2 hover:bg-gray-100 rounded-lg transition"
                     >
-                      <X className="w-5 h-5 text-orange-600" />
+                      <X className="w-5 h-5 text-gray-600" />
                     </button>
                   </div>
-                  
-                  <div className="space-y-4">
-                    {/* Basic Info Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Item Name *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g., Apple"
-                          value={newItem.itemName}
-                          onChange={(e) => setNewItem({ ...newItem, itemName: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Qty *</label>
-                        <input
-                          type="number"
-                          placeholder="100"
-                          value={newItem.quantity}
-                          onChange={(e) => setNewItem({ ...newItem, quantity: parseFloat(e.target.value) || 0 })}
-                          className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
-                        />
-                      </div>
-                    </div>
 
-                    {/* Unit & Category */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Unit</label>
-                        <select
-                          value={newItem.unit}
-                          onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                          className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
-                        >
-                          <option value="grams">Grams</option>
-                          <option value="pieces">Pieces</option>
-                          <option value="cups">Cups</option>
-                          <option value="servings">Servings</option>
-                          <option value="ml">ML</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Category</label>
-                        <select
-                          value={newItem.category}
-                          onChange={(e) => setNewItem({ ...newItem, category: e.target.value as "fruits" | "vegetables" | "dairy" | "grains" | "protein" | "beverages" | "snacks" | "other" })}
-                          className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
-                        >
-                          <option value="fruits">🍎 Fruits</option>
-                          <option value="vegetables">🥕 Vegetables</option>
-                          <option value="dairy">🥛 Dairy</option>
-                          <option value="grains">🌾 Grains</option>
-                          <option value="protein">🍗 Protein</option>
-                          <option value="beverages">🥤 Beverages</option>
-                          <option value="snacks">🍿 Snacks</option>
-                          <option value="other">🍽️ Other</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Meal Type */}
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Meal Type</label>
-                      <select
-                        value={newItem.mealType}
-                        onChange={(e) => setNewItem({ ...newItem, mealType: e.target.value as "breakfast" | "lunch" | "dinner" | "snack" | "beverage" })}
-                        className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
-                      >
-                        <option value="breakfast">🌅 Breakfast</option>
-                        <option value="lunch">🍽️ Lunch</option>
-                        <option value="dinner">🌙 Dinner</option>
-                        <option value="snack">🍪 Snack</option>
-                        <option value="beverage">☕ Beverage</option>
-                      </select>
-                    </div>
-
-                    {/* Nutrition Grid */}
-                    <div className="bg-white rounded-lg p-4 border border-orange-300">
-                      <h5 className="text-xs font-bold text-orange-700 mb-3 uppercase tracking-wider">Nutrition (per serving)</h5>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs text-gray-600 font-semibold mb-1">Calories</label>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            value={newItem.calories || 0}
-                            onChange={(e) => setNewItem({ ...newItem, calories: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 font-semibold mb-1">Protein (g)</label>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            value={newItem.protein || 0}
-                            onChange={(e) => setNewItem({ ...newItem, protein: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 font-semibold mb-1">Carbs (g)</label>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            value={newItem.carbs || 0}
-                            onChange={(e) => setNewItem({ ...newItem, carbs: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 font-semibold mb-1">Fats (g)</label>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            value={newItem.fats || 0}
-                            onChange={(e) => setNewItem({ ...newItem, fats: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 font-semibold mb-1">Fiber (g)</label>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            value={newItem.fiber || 0}
-                            onChange={(e) => setNewItem({ ...newItem, fiber: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-600 font-semibold mb-1">Sugar (g)</label>
-                          <input
-                            type="number"
-                            placeholder="0"
-                            value={newItem.sugar || 0}
-                            onChange={(e) => setNewItem({ ...newItem, sugar: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-2 py-1.5 bg-orange-50 border border-orange-200 rounded text-sm text-gray-900 font-medium text-center"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Notes */}
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-2 uppercase tracking-wider">Notes</label>
-                      <textarea
-                        placeholder="Optional notes..."
-                        value={newItem.notes || ''}
-                        onChange={(e) => setNewItem({ ...newItem, notes: e.target.value })}
-                        rows={2}
-                        className="w-full px-3 py-2 bg-white border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white text-sm text-gray-900 font-medium"
-                      />
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-3 pt-4 border-t border-orange-200">
-                      <button
-                        onClick={() => {
-                          setShowAddModal(false);
-                          setNewItem({
-                            itemName: '',
-                            quantity: 1,
-                            unit: 'grams',
-                            category: 'other',
-                            calories: 0,
-                            protein: 0,
-                            carbs: 0,
-                            fats: 0,
-                            fiber: 0,
-                            sugar: 0,
-                            sodium: 0,
-                            mealType: 'snack',
-                            notes: '',
-                          });
-                        }}
-                        className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition text-sm"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleAddItem}
-                        disabled={addMutation.isPending || !newItem.itemName}
-                        className="flex-1 px-4 py-2 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold rounded-lg hover:shadow-lg transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {addMutation.isPending ? 'Adding...' : 'Add Item'}
-                      </button>
-                    </div>
+                  {/* Mode Toggle Tabs */}
+                  <div className="flex gap-2 mb-6 border-b-2 border-gray-300">
+                    <button
+                      onClick={() => setAddMode('inventory')}
+                      className={`px-4 py-2 font-semibold transition ${
+                        addMode === 'inventory'
+                          ? 'text-orange-600 border-b-2 border-orange-600'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      📦 From Inventory ({inventoryItems.length})
+                    </button>
                   </div>
+
+                  {/* INVENTORY MODE */}
+                  {addMode === 'inventory' && (
+                    <div className="space-y-4">
+                      {inventoryItems.length === 0 ? (
+                        <div className="bg-gray-50 rounded-xl p-8 text-center border-2 border-dashed border-gray-300">
+                          <p className="text-gray-700 font-bold mb-2 text-lg">📭 No Inventory Items</p>
+                          <p className="text-sm text-gray-600">Add items to your inventory first to select them here</p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Search/Filter Bar */}
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="text"
+                              placeholder="🔍 Search items..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500/30 text-sm bg-white"
+                            />
+                            <button
+                              type="button"
+                              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium text-sm border border-gray-300"
+                            >
+                              🎯 {filteredInventoryItems.length}
+                            </button>
+                          </div>
+
+                          {/* Category Pills - Quick Filter */}
+                          <div className="flex flex-wrap gap-2">
+                            {['all', ...new Set(inventoryItems.map(i => i.category))].map((cat) => (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => setSelectedCategory(cat)}
+                                className={`px-3 py-1 text-xs font-medium rounded-full transition border ${
+                                  selectedCategory === cat
+                                    ? 'bg-orange-600 text-white border-orange-700 shadow-md'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                }`}
+                              >
+                                {cat === 'all' ? '📋 All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Inventory Items - Compact List */}
+                          <div className="bg-white rounded-xl p-4 border border-gray-300 max-h-72 overflow-y-auto space-y-2">
+                            {filteredInventoryItems.length === 0 ? (
+                              <div className="p-4 text-center text-gray-600 text-sm">
+                                No items found in this category
+                              </div>
+                            ) : (
+                            filteredInventoryItems.map((item) => {
+                              const expiryDate = item.expirationDate ? new Date(item.expirationDate) : null;
+                              const today = new Date();
+                              const daysLeft = expiryDate ? Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : null;
+                              const isExpiringSoon = daysLeft !== null && daysLeft <= 3 && daysLeft >= 0;
+                              const isExpired = daysLeft !== null && daysLeft < 0;
+
+                              return (
+                                <button
+                                  key={item._id}
+                                  onClick={() => setSelectedInventoryItem(item)}
+                                  type="button"
+                                  className={`w-full p-3 rounded-lg text-left transition border-2 flex items-center justify-between ${
+                                    selectedInventoryItem?._id === item._id
+                                      ? 'bg-gray-50 border-orange-600 shadow-md ring-2 ring-orange-300'
+                                      : isExpired ? 'bg-red-50 border-red-200 hover:border-red-400'
+                                      : isExpiringSoon ? 'bg-yellow-50 border-yellow-200 hover:border-yellow-400'
+                                      : 'bg-white border-gray-300 hover:border-orange-500'
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="font-bold text-gray-900 text-sm truncate">{item.itemName}</p>
+                                      <span className="text-xs bg-gray-200 text-gray-800 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                        📦 {(item.quantity || 1).toFixed(1)} {item.unit || 'pieces'}
+                                      </span>
+                                      {isExpired && (
+                                        <span className="text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                          ❌ Expired
+                                        </span>
+                                      )}
+                                      {isExpiringSoon && !isExpired && (
+                                        <span className="text-xs bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                          ⚠️ Expiring Soon
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                                      <span>📂 {item.category}</span>
+                                      <span>💰 tk {item.costPerUnit.toFixed(2)}</span>
+                                      {daysLeft !== null && (
+                                        <span className={isExpired ? 'text-red-600 font-semibold' : isExpiringSoon ? 'text-yellow-600 font-semibold' : 'text-green-600'}>
+                                          📅 {daysLeft}d left
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="ml-2 shrink-0">
+                                    {selectedInventoryItem?._id === item._id && (
+                                      <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-xs">✓</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })
+                            )}
+                          </div>
+
+                          {/* Selection Details - Condensed */}
+                          {selectedInventoryItem && (
+                            <div className="bg-orange-600 rounded-xl p-4 space-y-3 text-white shadow-lg">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h5 className="font-bold text-lg">✅ {selectedInventoryItem.itemName}</h5>
+                                  <p className="text-orange-100 text-sm mt-1">
+                                    Available: {(selectedInventoryItem.quantity || 1).toFixed(1)} {selectedInventoryItem.unit || 'pieces'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="bg-white/15 rounded-lg p-3 space-y-2">
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs font-bold text-white mb-1">🍽️ Consume</label>
+                                    <input
+                                      type="number"
+                                      min="0.1"
+                                      step="0.1"
+                                      value={consumeQuantity}
+                                      onChange={(e) => setConsumeQuantity(parseFloat(e.target.value) || 1)}
+                                      className="w-full px-2 py-1.5 bg-white border border-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 font-bold text-orange-600 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-bold text-white mb-1">🍴 Meal Type</label>
+                                    <select
+                                      value={consumeMealType}
+                                      onChange={(e) => setConsumeMealType(e.target.value as 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'beverage')}
+                                      className="w-full px-2 py-1.5 bg-white border border-white rounded-lg focus:outline-none focus:ring-2 focus:ring-white/50 font-medium text-sm text-gray-900"
+                                    >
+                                      <option value="breakfast">🌅 Breakfast</option>
+                                      <option value="lunch">🍽️ Lunch</option>
+                                      <option value="dinner">🌙 Dinner</option>
+                                      <option value="snack">🍪 Snack</option>
+                                      <option value="beverage">☕ Beverage</option>
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex gap-2 pt-2">
+                                <button
+                                  onClick={() => {
+                                    const itemToAdd: Omit<DailyLogItem, '_id'> = {
+                                      itemName: selectedInventoryItem.itemName,
+                                      quantity: consumeQuantity,
+                                      unit: selectedInventoryItem.unit || 'pieces',
+                                      category: selectedInventoryItem.category as "fruits" | "vegetables" | "dairy" | "grains" | "protein" | "beverages" | "snacks" | "other",
+                                      calories: 0,
+                                      protein: 0,
+                                      carbs: 0,
+                                      fats: 0,
+                                      fiber: 0,
+                                      sugar: 0,
+                                      sodium: 0,
+                                      mealType: consumeMealType,
+                                      notes: '',
+                                    };
+                                    addMutation.mutate({
+                                      date: selectedDate,
+                                      item: itemToAdd,
+                                    });
+                                  }}
+                                  disabled={addMutation.isPending}
+                                  className="flex-1 px-3 py-2 bg-white text-orange-600 font-bold rounded-lg hover:bg-orange-50 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                >
+                                  {addMutation.isPending ? '⏳ Adding...' : '✅ Add to Daily Log'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedInventoryItem(null)}
+                                  className="px-3 py-2 bg-white/30 text-white font-semibold rounded-lg hover:bg-white/40 transition text-sm border border-white/50"
+                                >
+                                  ↺ Clear
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* MANUAL MODE - DISABLED */}
+                  {addMode === 'manual' && (
+                    <div className="bg-gray-50 rounded-xl p-8 text-center border-2 border-dashed border-gray-300">
+                      <p className="text-gray-700 font-bold mb-2 text-lg">🔒 Manual Entry Disabled</p>
+                      <p className="text-sm text-gray-600">Please use items from your inventory instead</p>
+                      <button
+                        onClick={() => setAddMode('inventory')}
+                        className="mt-4 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium"
+                      >
+                        📦 Back to Inventory
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

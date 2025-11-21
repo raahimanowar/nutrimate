@@ -32,6 +32,9 @@ const TipDetailPage = () => {
       return res.data;
     },
     enabled: !!id,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: 2,
   });
 
   const resource = response?.data as ResourceDetail | undefined;

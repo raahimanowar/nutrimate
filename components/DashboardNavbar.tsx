@@ -37,36 +37,7 @@ const DashboardNavbar = () => {
       {/* Right Section - Notifications and Profile */}
       <div className="flex items-center gap-6">
         {/* Notifications */}
-        <div className="relative">
-          <button
-            onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-            className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all group"
-          >
-            <Bell className="w-5 h-5 group-hover:text-orange-600 transition-colors" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-
-          {/* Notification Dropdown */}
-          {isNotificationOpen && (
-            <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-40">
-              <div className="p-4 border-b border-gray-100">
-                <p className="text-sm font-semibold text-gray-900">Notifications</p>
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {[
-                  { title: "Reminder", desc: "Time to log your breakfast!" },
-                  { title: "Milestone", desc: "You've logged 50 food items!" },
-                  { title: "Tip", desc: "Check out our new sustainability tips" },
-                ].map((notif, idx) => (
-                  <div key={idx} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer last:border-b-0">
-                    <p className="text-sm font-medium text-gray-900">{notif.title}</p>
-                    <p className="text-xs text-gray-600 mt-1">{notif.desc}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        
 
         <Separator orientation="vertical" className="h-6" />
 
@@ -91,7 +62,7 @@ const DashboardNavbar = () => {
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-sm font-medium text-gray-900">{user?.username || 'User'}</p>
-              <p className="text-xs text-gray-500">{user?.role || 'user'}</p>
+              <p className="text-xs text-gray-500">{user?.role || 'user'}{user?.id}</p>
             </div>
             <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-orange-600 transition-colors" />
           </button>

@@ -70,6 +70,9 @@ const TipsPage = () => {
       const res = await axios.get(url);
       return res.data;
     },
+    staleTime: 15 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    retry: 2,
   });
 
   const resources = response?.data || [];

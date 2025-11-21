@@ -20,6 +20,10 @@ interface InventoryItem {
     expirationDate: string | null;
     hasExpiration: boolean;
     costPerUnit: number;
+    quantity?: number;
+    unit?: string;
+    baseQuantity?: number;
+    baseUnit?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -107,6 +111,9 @@ const InventoryPage = () => {
             return response.data.data as InventoryItem[];
         },
         enabled: !!user,
+        staleTime: 3 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
+        retry: 2,
     });
 
     // Get unique categories from inventory
@@ -139,6 +146,9 @@ const InventoryPage = () => {
             return Array.from(new Map(allTips.map(tip => [tip.id, tip])).values()).slice(0, 10) as SuggestedTip[];
         },
         enabled: !!user && uniqueCategories.length > 0,
+        staleTime: 10 * 60 * 1000,
+        gcTime: 30 * 60 * 1000,
+        retry: 2,
     });
 
     // Add item mutation
@@ -149,6 +159,8 @@ const InventoryPage = () => {
             expirationDate: string | null;
             hasExpiration: boolean;
             costPerUnit: number;
+            quantity?: number;
+            unit?: string;
         }) => {
             const token = localStorage.getItem('authToken');
             if (!token) throw new Error('No authentication token');
@@ -206,6 +218,8 @@ const InventoryPage = () => {
             expirationDate: string | null;
             hasExpiration: boolean;
             costPerUnit: number;
+            quantity?: number;
+            unit?: string;
         }) => {
             const token = localStorage.getItem('authToken');
             if (!token) throw new Error('No authentication token');
@@ -218,6 +232,8 @@ const InventoryPage = () => {
                     expirationDate: data.expirationDate,
                     hasExpiration: data.hasExpiration,
                     costPerUnit: data.costPerUnit,
+                    quantity: data.quantity,
+                    unit: data.unit,
                 },
                 {
                     headers: {
@@ -314,7 +330,7 @@ const InventoryPage = () => {
 
                                 {/* Min Cost */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Min Cost ($)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Min Cost (tk)</label>
                                     <input
                                         type="number"
                                         min="0"
@@ -328,7 +344,7 @@ const InventoryPage = () => {
 
                                 {/* Max Cost */}
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Cost ($)</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Max Cost (tk)</label>
                                     <input
                                         type="number"
                                         min="0"

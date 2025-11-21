@@ -1,5 +1,6 @@
 import Sidebar from "@/components/Sidebar";
 import DashboardNavbar from "@/components/DashboardNavbar";
+import NourishBotWrapper from "@/components/NourishBotWrapper";
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     return (
@@ -18,6 +19,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                         {children}
                     </div>
                 </main>
+                {/* NourishBot Chatbot */}
+                <NourishBotWrapper />
             </div>
         </div>
     );

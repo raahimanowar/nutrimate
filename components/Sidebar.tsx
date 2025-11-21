@@ -7,27 +7,39 @@ import {
     Home,
     Apple,
     Package,
-    Lightbulb,
-    BarChart3,
     Users,
-    Settings,
     Image,
     Boxes,
+    Activity,
+    UtensilsCrossed,
+    AlertTriangle,
+    ScanLine,
+    User,
+    BookOpen,
+    Trash2,
+    Target,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const mainMenuItems = [
     { label: "Dashboard", href: "/dashboard", icon: Home },
-    { label: "Profile", href: "/dashboard/profile", icon: Settings },
+    { label: "Profile", href: "/dashboard/profile", icon: User },
     { label: "Daily Log", href: "/dashboard/dailylog", icon: Apple },
     { label: "My Inventory", href: "/dashboard/inventory", icon: Package },
     { label: "Food Inventory", href: "/dashboard/foodinventory", icon: Boxes },
     { label: "Image Processing", href: "/dashboard/imageprocess", icon: Image },
-    { label: "Tips & Resources", href: "/dashboard/tips", icon: Lightbulb },
+    { label: "Tips & Resources", href: "/dashboard/tips", icon: BookOpen },
+];
+const inventoryItems = [
+    { label: "Meal Optimizer", href: "/dashboard/mealoptimizer", icon: UtensilsCrossed },
+    { label: "Expiration Risk", href: "/dashboard/expirationrisk", icon: AlertTriangle },
+    { label: "Image to Inventory", href: "/dashboard/imageextract", icon: ScanLine },
+    { label: "Nutrient Gap", href: "/dashboard/nutrientgap", icon: Activity },
+    { label: "SDG Impact", href: "/dashboard/sdgimpact", icon: Target },
+    { label: "Waste Estimation", href: "/dashboard/wasteestimation", icon: Trash2 },
 ];
 
 const communityItems = [
-    { label: "Family", href: "/dashboard/family", icon: Users },
     { label: "Community", href: "/dashboard/community", icon: Users },
 ];
 
@@ -84,6 +96,39 @@ const Sidebar = () => {
                     })}
                 </nav>
             </div>
+
+            {/* INVENTORY TOOLS SECTION */}
+            {!collapsed && (
+                <div className="space-y-2 pb-4">
+                    <Separator className="mb-4" />
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-3">
+                        Advance Tools
+                    </p>
+                    <nav className="space-y-1">
+                        {inventoryItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = pathname === item.href;
+
+                            return (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group ${isActive
+                                        ? "bg-linear-to-r from-orange-500/20 to-amber-500/10 text-orange-600 border border-orange-500/30"
+                                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                        }`}
+                                >
+                                    <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-orange-600" : "group-hover:text-orange-600"} transition-colors`} />
+                                    <span className="font-medium">{item.label}</span>
+                                    {isActive && (
+                                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-600"></div>
+                                    )}
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                </div>
+            )}
 
             {/* COMMUNITY SECTION */}
             {!collapsed && (

@@ -124,6 +124,9 @@ const ProfilePage = () => {
   const { data: profile, isLoading, error } = useQuery<UserProfile>({
     queryKey: ['userProfile'],
     queryFn: fetchUserProfile,
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 120, // 2 hours
+    retry: 2,
   });
 
   // Update profile mutation
@@ -480,17 +483,17 @@ const ProfilePage = () => {
                       <div className="space-y-3">
                         <div className="flex justify-between items-center p-3 bg-orange-50/30 rounded-lg">
                           <span className="text-gray-600 font-medium text-sm">Monthly Budget</span>
-                          <span className="text-gray-900 font-bold">${profile.budgetPreferences.monthlyBudget || '0'}</span>
+                          <span className="text-gray-900 font-bold">tk {profile.budgetPreferences.monthlyBudget || '0'}</span>
                         </div>
                         {profile.budgetPreferences.spendingCategories && (
                           <>
                             <div className="flex justify-between items-center p-3 bg-orange-50/30 rounded-lg">
                               <span className="text-gray-600 font-medium text-sm">Groceries</span>
-                              <span className="text-gray-900 font-bold">${profile.budgetPreferences.spendingCategories.groceries || 0}</span>
+                              <span className="text-gray-900 font-bold">tk {profile.budgetPreferences.spendingCategories.groceries || 0}</span>
                             </div>
                             <div className="flex justify-between items-center p-3 bg-orange-50/30 rounded-lg">
                               <span className="text-gray-600 font-medium text-sm">Dining Out</span>
-                              <span className="text-gray-900 font-bold">${profile.budgetPreferences.spendingCategories.diningOut || 0}</span>
+                              <span className="text-gray-900 font-bold">tk {profile.budgetPreferences.spendingCategories.diningOut || 0}</span>
                             </div>
                           </>
                         )}
@@ -895,68 +898,77 @@ const ProfilePage = () => {
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-sm font-bold text-gray-700">Protein (g)</label>
+                        <label className="text-sm font-bold text-gray-700">Protein (%)</label>
                         <input
                           type="number"
+                          min="0"
+                          max="100"
                           value={formData.dietaryNeeds?.macroTargets?.protein || ''}
                           onChange={(e) => {
+                            const value = e.target.value ? Math.min(100, Math.max(0, parseFloat(e.target.value))) : undefined;
                             setFormData((prev) => ({
                               ...prev,
                               dietaryNeeds: {
                                 ...prev.dietaryNeeds,
                                 macroTargets: {
                                   ...prev.dietaryNeeds?.macroTargets,
-                                  protein: e.target.value ? parseFloat(e.target.value) : undefined,
+                                  protein: value,
                                 },
                               },
                             }));
                           }}
                           className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-gray-900 placeholder-gray-400 font-medium"
-                          placeholder="e.g., 150"
+                          placeholder="e.g., 30"
                         />
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-sm font-bold text-gray-700">Carbs (g)</label>
+                        <label className="text-sm font-bold text-gray-700">Carbs (%)</label>
                         <input
                           type="number"
+                          min="0"
+                          max="100"
                           value={formData.dietaryNeeds?.macroTargets?.carbs || ''}
                           onChange={(e) => {
+                            const value = e.target.value ? Math.min(100, Math.max(0, parseFloat(e.target.value))) : undefined;
                             setFormData((prev) => ({
                               ...prev,
                               dietaryNeeds: {
                                 ...prev.dietaryNeeds,
                                 macroTargets: {
                                   ...prev.dietaryNeeds?.macroTargets,
-                                  carbs: e.target.value ? parseFloat(e.target.value) : undefined,
+                                  carbs: value,
                                 },
                               },
                             }));
                           }}
                           className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-gray-900 placeholder-gray-400 font-medium"
-                          placeholder="e.g., 250"
+                          placeholder="e.g., 45"
                         />
                       </div>
 
                       <div className="space-y-3">
-                        <label className="text-sm font-bold text-gray-700">Fats (g)</label>
+                        <label className="text-sm font-bold text-gray-700">Fats (%)</label>
                         <input
                           type="number"
+                          min="0"
+                          max="100"
                           value={formData.dietaryNeeds?.macroTargets?.fats || ''}
                           onChange={(e) => {
+                            const value = e.target.value ? Math.min(100, Math.max(0, parseFloat(e.target.value))) : undefined;
                             setFormData((prev) => ({
                               ...prev,
                               dietaryNeeds: {
                                 ...prev.dietaryNeeds,
                                 macroTargets: {
                                   ...prev.dietaryNeeds?.macroTargets,
-                                  fats: e.target.value ? parseFloat(e.target.value) : undefined,
+                                  fats: value,
                                 },
                               },
                             }));
                           }}
                           className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 text-gray-900 placeholder-gray-400 font-medium"
-                          placeholder="e.g., 65"
+                          placeholder="e.g., 25"
                         />
                       </div>
 

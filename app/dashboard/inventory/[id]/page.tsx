@@ -29,15 +29,18 @@ const ItemDetailsPage = () => {
       if (!token) throw new Error('No authentication token');
 
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/inventory/${itemId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/inventory/${params.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      return response.data.data as InventoryItem;
+      return response.data.data;
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    retry: 2,
   });
 
   if (isLoading) {
@@ -140,7 +143,7 @@ const ItemDetailsPage = () => {
                 Single Unit Cost
               </p>
               <p className="text-lg font-bold text-purple-900">
-                ${item.costPerUnit.toFixed(2)}
+                tk {item.costPerUnit.toFixed(2)}
               </p>
             </div>
           </div>
