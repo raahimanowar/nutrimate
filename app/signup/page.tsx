@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 import { useUserInfo } from '@/lib/context/UserContext';
 
 interface FormData {
@@ -28,6 +30,13 @@ interface PasswordStrength {
     hasSpecial: boolean;
 }
 
+interface SignupResponse {
+    success: boolean;
+    data: {
+        token: string;
+    };
+}
+
 const SignupPage = () => {
     const router = useRouter();
     const { fetchUserInfo } = useUserInfo();
@@ -41,8 +50,46 @@ const SignupPage = () => {
     const [errors, setErrors] = useState<ValidationErrors>({});
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [signupSuccess, setSignupSuccess] = useState(false);
+
+    // Signup mutation
+    const signupMutation = useMutation({
+        mutationFn: async (credentials: { username: string; email: string; password: string }) => {
+            const response = await axios.post<SignupResponse>(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`,
+                credentials
+            );
+            return response.data;
+        },
+        onSuccess: async (data) => {
+            if (data.success && data.data.token) {
+                localStorage.setItem('authToken', data.data.token);
+                
+                // Fetch user info after successful registration
+                await fetchUserInfo();
+                
+                setSignupSuccess(true);
+                setFormData({
+                    username: '',
+                    email: '',
+                    password: '',
+                    confirmPassword: '',
+                });
+                
+                toast.success('Signup successful! Welcome to NutriMATE! 🎉');
+                setTimeout(() => router.push('/dashboard'), 1500);
+            }
+        },
+        onError: (error) => {
+            let errorMessage = 'Network error. Please try again.';
+            if (error instanceof Error && 'response' in error) {
+                const axiosError = error as { response?: { data?: { message?: string } } };
+                errorMessage = axiosError.response?.data?.message || errorMessage;
+            }
+            setErrors({ username: errorMessage });
+            toast.error(errorMessage);
+        },
+    });
 
     // Password strength checker
     const checkPasswordStrength = (pwd: string): PasswordStrength => ({
@@ -92,45 +139,15 @@ const SignupPage = () => {
     };
 
     // Submit
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
 
-        setIsSubmitting(true);
-
-        try {
-            const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signup`, {
-                username: formData.username,
-                email: formData.email,
-                password: formData.password,
-            });
-
-            if (response.data.success && response.data.data.token) {
-                localStorage.setItem('authToken', response.data.data.token);
-                
-                // Fetch user info after successful registration
-                await fetchUserInfo();
-            }
-
-            setSignupSuccess(true);
-            setFormData({
-                username: '',
-                email: '',
-                password: '',
-                confirmPassword: '',
-            });
-
-            setTimeout(() => router.push('/dashboard'), 1500);
-        } catch (error) {
-            let errorMessage = 'Network error. Please try again.';
-            if (error instanceof Error && 'response' in error) {
-                const axiosError = error as { response?: { data?: { message?: string } } };
-                errorMessage = axiosError.response?.data?.message || errorMessage;
-            }
-            setErrors({ username: errorMessage });
-        } finally {
-            setIsSubmitting(false);
-        }
+        signupMutation.mutate({
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+        });
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,11 +362,11 @@ const SignupPage = () => {
                             {/* SUBMIT */}
                             <button
                                 type="submit"
-                                disabled={isSubmitting}
+                                disabled={signupMutation.isPending}
                                 className="w-full mt-6 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold py-3 px-4 rounded-xl 
                                 hover:shadow-lg hover:shadow-orange-500/40 transition-all duration-300 disabled:opacity-50"
                             >
-                                {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                                {signupMutation.isPending ? 'Creating Account...' : 'Create Account'}
                             </button>
 
                             {/* Terms */}
@@ -377,6 +394,7 @@ const SignupPage = () => {
                 </div>
 
             </div>
+            <Toaster position="top-right" />
         </div>
     );
 };

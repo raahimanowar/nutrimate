@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Edit2, Save, X, User, Mail, Ruler, Weight, Calendar, Globe, MapPin, CheckCircle, AlertCircle, Upload, DollarSign, Leaf, ChevronLeft, ChevronRight } from 'lucide-react';
+import toast from 'react-hot-toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface BudgetPreferences {
   monthlyBudget?: number;
@@ -94,10 +96,27 @@ const updateUserProfile = async (data: UpdateProfileData): Promise<UserProfile> 
   return response.data.data;
 };
 
+// Upload profile picture
+const uploadProfilePicture = async (formData: FormData): Promise<{ profilePic: string }> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) throw new Error('No authentication token');
+
+  const response = await axios.post(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/upload/profile-picture`,
+    formData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data.data;
+};
+
 const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<UpdateProfileData>({});
-  const [isUploadingimg, setIsUploadingimg] = useState(false);
   const [editStep, setEditStep] = useState<1 | 2 | 3>(1);
   const queryClient = useQueryClient();
 
@@ -114,6 +133,31 @@ const ProfilePage = () => {
       queryClient.setQueryData(['userProfile'], data);
       setIsEditing(false);
       setFormData({});
+      toast.success('Profile updated successfully! ✨');
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to update profile';
+      toast.error(message);
+    },
+  });
+
+  // Upload profile picture mutation
+  const uploadProfilePicMutation = useMutation({
+    mutationFn: uploadProfilePicture,
+    onSuccess: (data) => {
+      setFormData((prev) => ({
+        ...prev,
+        profilePic: data.profilePic,
+      }));
+      // Update the cache with new profile pic
+      if (profile) {
+        queryClient.setQueryData(['userProfile'], { ...profile, profilePic: data.profilePic });
+      }
+      toast.success('Profile picture updated! 📸');
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to upload profile picture';
+      toast.error(message);
     },
   });
 
@@ -195,59 +239,34 @@ const ProfilePage = () => {
     // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert('File size must be less than 5MB');
+      toast.error('File size must be less than 5MB');
       return;
     }
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select a valid image file');
+      toast.error('Please select a valid image file');
       return;
     }
 
-    // Upload to backend
-    setIsUploadingimg(true);
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) throw new Error('No authentication token');
+    // Prepare FormData for upload
+    const formDataForUpload = new FormData();
+    formDataForUpload.append('image', file);
 
-      const formDataForUpload = new FormData();
-      formDataForUpload.append('image', file);
-
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/upload/profile-picture`,
-        formDataForUpload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      // Update form data with the new profile picture URL
-      setFormData((prev) => ({
-        ...prev,
-        profilePic: response.data.data.profilePic,
-      }));
-
-      alert('img uploaded successfully!');
-    } catch (error) {
-      console.error('Profile picture upload error:', error);
-      alert('Failed to upload img. Please try again.');
-    } finally {
-      setIsUploadingimg(false);
-    }
+    // Use mutation to upload
+    uploadProfilePicMutation.mutate(formDataForUpload, {
+      onSuccess: () => {
+        toast.success('Profile picture uploaded successfully!');
+      },
+      onError: (error) => {
+        console.error('Profile picture upload error:', error);
+        toast.error('Failed to upload profile picture. Please try again.');
+      },
+    });
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-linear-to-br from-orange-400 to-amber-500 mx-auto animate-pulse"></div>
-          <p className="text-lg text-gray-600 font-medium">Loading your profile...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading Your Profile..." fullScreen />;
   }
 
   if (error) {
@@ -688,7 +707,7 @@ const ProfilePage = () => {
                           id="profilePicInput"
                           accept="image/*"
                           onChange={handleProfilePicChange}
-                          disabled={isUploadingimg}
+                          disabled={uploadProfilePicMutation.isPending}
                           className="hidden"
                         />
                         <label
@@ -696,7 +715,7 @@ const ProfilePage = () => {
                           className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-orange-300 rounded-xl hover:bg-orange-50/30 cursor-pointer transition-all duration-300 disabled:opacity-50"
                         >
                           <Upload size={18} className="text-orange-600" />
-                          <span className="text-orange-600 font-semibold">{isUploadingimg ? 'Uploading...' : 'Upload New Picture'}</span>
+                          <span className="text-orange-600 font-semibold">{uploadProfilePicMutation.isPending ? 'Uploading...' : 'Upload New Picture'}</span>
                         </label>
                       </div>
                     </div>

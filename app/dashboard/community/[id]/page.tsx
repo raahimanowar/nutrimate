@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { ArrowLeft, Users, MapPin, FileText, Heart, MessageCircle, Share2, Loader, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Users, MapPin, FileText, ThumbsUp, ThumbsDown, Loader, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface Community {
   _id: string;
@@ -84,13 +85,26 @@ const getCommunityPosts = async (id: string): Promise<CommunityPost[]> => {
   return response.data.data || [];
 };
 
-const createPost = async (id: string, content: string): Promise<CommunityPost> => {
+const createPost = async (id: string, content: string, category: string): Promise<CommunityPost> => {
   const token = localStorage.getItem('authToken');
   if (!token) throw new Error('No authentication token');
 
   const response = await axios.post<ApiResponse<CommunityPost>>(
     `${API_BASE}/api/communities/${id}/posts`,
-    { content, category: 'general' },
+    { content, category },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  return response.data.data;
+};
+
+const voteOnPost = async (communityId: string, postId: string, voteType: 'upvote' | 'downvote'): Promise<CommunityPost> => {
+  const token = localStorage.getItem('authToken');
+  if (!token) throw new Error('No authentication token');
+
+  const response = await axios.post<ApiResponse<CommunityPost>>(
+    `${API_BASE}/api/communities/${communityId}/posts/${postId}/vote`,
+    { voteType },
     { headers: { Authorization: `Bearer ${token}` } }
   );
 
@@ -112,6 +126,7 @@ const CommunityDetailsPage = () => {
   const communityId = params.id as string;
   const queryClient = useQueryClient();
   const [newPostContent, setNewPostContent] = useState('');
+  const [newPostCategory, setNewPostCategory] = useState('general');
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
@@ -139,17 +154,70 @@ const CommunityDetailsPage = () => {
 
   // Create post mutation
   const postMutation = useMutation({
-    mutationFn: () => createPost(communityId, newPostContent),
+    mutationFn: () => createPost(communityId, newPostContent, newPostCategory),
     onSuccess: (newPost) => {
       queryClient.setQueryData(['communityPosts', communityId], (old: CommunityPost[] | undefined) => {
         return old ? [newPost, ...old] : [newPost];
       });
       setNewPostContent('');
+      setNewPostCategory('general');
+      setShowPostModal(false);
       toast.success('Post created successfully! 🎉');
     },
     onError: (error) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorMessage = (error as any).response?.data?.message || 'Failed to create post';
+      toast.error(errorMessage);
+    },
+  });
+
+  // Vote on post mutation with optimistic updates
+  const voteMutation = useMutation({
+    mutationFn: ({ postId, voteType }: { postId: string; voteType: 'upvote' | 'downvote' }) =>
+      voteOnPost(communityId, postId, voteType),
+    onMutate: async ({ postId, voteType }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['communityPosts', communityId] });
+
+      // Snapshot the previous value
+      const previousPosts = queryClient.getQueryData<CommunityPost[]>(['communityPosts', communityId]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['communityPosts', communityId], (old: CommunityPost[] | undefined) => {
+        if (!old) return old;
+        return old.map(post => {
+          if (post._id === postId) {
+            const updatedPost = { ...post };
+            if (voteType === 'upvote') {
+              updatedPost.upvotesCount = (updatedPost.upvotesCount || 0) + 1;
+            } else {
+              updatedPost.downvotesCount = (updatedPost.downvotesCount || 0) + 1;
+            }
+            updatedPost.userVote = voteType;
+            return updatedPost;
+          }
+          return post;
+        });
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousPosts };
+    },
+    onSuccess: (updatedPost) => {
+      // Update with actual server response
+      queryClient.setQueryData(['communityPosts', communityId], (old: CommunityPost[] | undefined) => {
+        if (!old) return [updatedPost];
+        return old.map(post => post._id === updatedPost._id ? updatedPost : post);
+      });
+      toast.success('Vote recorded! ✨');
+    },
+    onError: (error, variables, context) => {
+      // Revert to previous data on error
+      if (context?.previousPosts) {
+        queryClient.setQueryData(['communityPosts', communityId], context.previousPosts);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorMessage = (error as any).response?.data?.message || 'Failed to vote';
       toast.error(errorMessage);
     },
   });
@@ -184,14 +252,7 @@ const CommunityDetailsPage = () => {
   });
 
   if (communityLoading) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-blue-50 p-6 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader className="w-16 h-16 text-orange-500 animate-spin mx-auto" />
-          <p className="text-lg text-gray-600 font-medium">Loading community...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading community..." fullScreen />;
   }
 
   if (communityError || !community) {
@@ -271,6 +332,7 @@ const CommunityDetailsPage = () => {
                 onClick={() => {
                   setShowPostModal(false);
                   setNewPostContent('');
+                  setNewPostCategory('general');
                 }}
                 className="text-gray-400 hover:text-gray-600 text-2xl font-semibold"
               >
@@ -286,11 +348,26 @@ const CommunityDetailsPage = () => {
               rows={6}
             />
 
+            {/* Category Selector */}
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+              <select
+                value={newPostCategory}
+                onChange={(e) => setNewPostCategory(e.target.value)}
+                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="general">General Discussion</option>
+                <option value="tips">Tips & Advice</option>
+                <option value="food-sharing">Food Sharing</option>
+              </select>
+            </div>
+
             <div className="flex gap-3">
               <button
                 onClick={() => {
                   setShowPostModal(false);
                   setNewPostContent('');
+                  setNewPostCategory('general');
                 }}
                 className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition"
               >
@@ -299,7 +376,6 @@ const CommunityDetailsPage = () => {
               <button
                 onClick={() => {
                   postMutation.mutate();
-                  setShowPostModal(false);
                 }}
                 disabled={!newPostContent.trim() || postMutation.isPending}
                 className="flex-1 px-4 py-3 bg-linear-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -366,31 +442,44 @@ const CommunityDetailsPage = () => {
             <div className="space-y-6">
               <h2 className="text-2xl font-bold text-gray-900">Community Feed</h2>
               {postsLoading ? (
-                <div className="text-center py-8 text-gray-500 flex items-center justify-center gap-2">
-                  <Loader className="w-5 h-5 animate-spin" />
-                  Loading posts...
-                </div>
+                <LoadingSpinner message="Loading posts..." />
               ) : posts && posts.length > 0 ? (
                 posts.map((post) => (
                   <div key={post._id} className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-100 hover:shadow-xl transition">
-                    <div className="mb-3">
-                      <p className="text-sm font-semibold text-gray-600">{post.author?.username || 'Anonymous'}</p>
+                    {/* Post Header */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-semibold text-gray-700">{post.author?.username || 'Anonymous'}</p>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-medium">
+                          {post.category === 'general' ? 'General' : post.category === 'tips' ? 'Tips' : 'Food Sharing'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString()} at {new Date(post.createdAt).toLocaleTimeString()}
+                      </p>
                     </div>
-                    <p className="text-gray-800 mb-4">{post.content}</p>
-                    <div className="flex items-center gap-6 text-gray-500 text-sm">
-                      <button className="flex items-center gap-1 hover:text-red-500 transition">
-                        <Heart size={18} />
+
+                    {/* Post Content */}
+                    <p className="text-gray-800 mb-6 leading-relaxed">{post.content}</p>
+
+                    {/* Vote Section */}
+                    <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
+                      <button
+                        onClick={() => voteMutation.mutate({ postId: post._id, voteType: 'upvote' })}
+                        disabled={voteMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 font-semibold transition disabled:opacity-50"
+                      >
+                        <ThumbsUp size={18} />
                         <span>{post.upvotesCount}</span>
                       </button>
-                      <button className="flex items-center gap-1 hover:text-blue-500 transition">
-                        <MessageCircle size={18} />
+                      <button
+                        onClick={() => voteMutation.mutate({ postId: post._id, voteType: 'downvote' })}
+                        disabled={voteMutation.isPending}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold transition disabled:opacity-50"
+                      >
+                        <ThumbsDown size={18} />
+                        <span>{post.downvotesCount}</span>
                       </button>
-                      <button className="flex items-center gap-1 hover:text-orange-500 transition">
-                        <Share2 size={18} />
-                      </button>
-                      <span className="ml-auto text-xs text-gray-400">
-                        {new Date(post.createdAt).toLocaleDateString()}
-                      </span>
                     </div>
                   </div>
                 ))

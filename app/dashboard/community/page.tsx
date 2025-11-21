@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Plus, MapPin, FileText, Loader, Users, CheckCircle, AlertCircle, X, ArrowRight } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface Community {
   _id: string;
@@ -90,12 +91,40 @@ const CommunityPage = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Create community mutation
+  // Create community mutation with optimistic updates
   const createMutation = useMutation({
     mutationFn: createCommunityAPI,
-    onSuccess: (newCommunity) => {
+    onMutate: async (newCommunity) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['communities'] });
+
+      // Snapshot previous value
+      const previousCommunities = queryClient.getQueryData<Community[]>(['communities']);
+
+      // Optimistically update
       queryClient.setQueryData(['communities'], (old: Community[] | undefined) => {
-        return old ? [newCommunity, ...old] : [newCommunity];
+        const optimisticCommunity: Community = {
+          _id: `temp-${Date.now()}`,
+          ...newCommunity,
+          membersCount: 1,
+          isMember: true,
+          isAdmin: true,
+          createdAt: new Date().toISOString(),
+        };
+        return old ? [optimisticCommunity, ...old] : [optimisticCommunity];
+      });
+
+      return { previousCommunities };
+    },
+    onSuccess: (newCommunity) => {
+      // Update with actual server data, but ensure isMember and isAdmin are true
+      queryClient.setQueryData(['communities'], (old: Community[] | undefined) => {
+        const communityWithFlags = {
+          ...newCommunity,
+          isMember: true,
+          isAdmin: true,
+        };
+        return old?.map((c) => (c._id.startsWith('temp-') ? communityWithFlags : c)) || [communityWithFlags];
       });
 
       toast.success(
@@ -125,7 +154,11 @@ const CommunityPage = () => {
       setErrors({});
       setShowCreateForm(false);
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert on error
+      if (context?.previousCommunities) {
+        queryClient.setQueryData(['communities'], context.previousCommunities);
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorMessage = (error as any).response?.data?.message || 'Failed to create community';
       toast.error(
@@ -153,12 +186,35 @@ const CommunityPage = () => {
     },
   });
 
-  // Join community mutation
+  // Join community mutation with optimistic updates
   const joinMutation = useMutation({
     mutationFn: joinCommunityAPI,
-    onSuccess: (updatedCommunity) => {
+    onMutate: async (communityId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['communities'] });
+
+      // Snapshot previous value
+      const previousCommunities = queryClient.getQueryData<Community[]>(['communities']);
+
+      // Optimistically update
       queryClient.setQueryData(['communities'], (old: Community[] | undefined) => {
-        return old?.map((c) => (c._id === updatedCommunity._id ? updatedCommunity : c));
+        return old?.map((c) => 
+          c._id === communityId 
+            ? { ...c, isMember: true, membersCount: c.membersCount + 1 }
+            : c
+        );
+      });
+
+      return { previousCommunities };
+    },
+    onSuccess: (updatedCommunity) => {
+      // Update with actual server data, ensure isMember is true
+      queryClient.setQueryData(['communities'], (old: Community[] | undefined) => {
+        const communityWithMember = {
+          ...updatedCommunity,
+          isMember: true,
+        };
+        return old?.map((c) => (c._id === updatedCommunity._id ? communityWithMember : c));
       });
 
       toast.success(
@@ -184,7 +240,11 @@ const CommunityPage = () => {
         }
       );
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Revert on error
+      if (context?.previousCommunities) {
+        queryClient.setQueryData(['communities'], context.previousCommunities);
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorMessage = (error as any).response?.data?.message || 'Failed to join community';
       toast.error(errorMessage, {
@@ -256,14 +316,7 @@ const CommunityPage = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-blue-50 p-6 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-linear-to-br from-orange-400 to-amber-500 mx-auto animate-pulse"></div>
-          <p className="text-lg text-gray-600 font-medium">Loading communities...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading communities..." fullScreen />;
   }
 
   if (error) {

@@ -20,7 +20,7 @@ const mainMenuItems = [
     { label: "Dashboard", href: "/dashboard", icon: Home },
     { label: "Profile", href: "/dashboard/profile", icon: Settings },
     { label: "Daily Log", href: "/dashboard/dailylog", icon: Apple },
-    { label: "Inventory", href: "/dashboard/inventory", icon: Package },
+    { label: "My Inventory", href: "/dashboard/inventory", icon: Package },
     { label: "Food Inventory", href: "/dashboard/foodinventory", icon: Boxes },
     { label: "Image Processing", href: "/dashboard/imageprocess", icon: Image },
     { label: "Tips & Resources", href: "/dashboard/tips", icon: Lightbulb },

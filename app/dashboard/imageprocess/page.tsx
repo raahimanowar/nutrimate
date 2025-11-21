@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast, { Toaster } from 'react-hot-toast';
 import { Upload, Trash2, Download, Tag, Calendar, Image as ImageIcon } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface FoodImage {
   id: string;
@@ -209,14 +210,7 @@ const ImageProcessPage = () => {
   const pagination = imagesData?.data?.pagination;
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-amber-50 p-8 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-linear-to-br from-orange-400 to-amber-500 mx-auto animate-pulse"></div>
-          <p className="text-lg text-gray-600 font-medium">Loading images...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading Images..." fullScreen />;
   }
 
   return (

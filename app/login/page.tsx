@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
 import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 import { useUserInfo } from '@/lib/context/UserContext';
 
 interface FormData {
@@ -18,6 +20,13 @@ interface ValidationErrors {
     password?: string;
 }
 
+interface LoginResponse {
+    success: boolean;
+    data: {
+        token: string;
+    };
+}
+
 const LoginPage = () => {
     const router = useRouter();
     const { fetchUserInfo } = useUserInfo();
@@ -29,11 +38,54 @@ const LoginPage = () => {
 
     const [errors, setErrors] = useState<ValidationErrors>({});
     const [showPassword, setShowPassword] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [loginSuccess, setLoginSuccess] = useState(false);
 
     const isEmailValid = (email: string): boolean =>
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    // Login mutation
+    const loginMutation = useMutation({
+        mutationFn: async (credentials: { email: string; password: string }) => {
+            const response = await axios.post<LoginResponse>(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/signin`,
+                {
+                    identifier: credentials.email,
+                    password: credentials.password,
+                }
+            );
+            return response.data;
+        },
+        onSuccess: async (data) => {
+            if (data.success && data.data.token) {
+                localStorage.setItem('authToken', data.data.token);
+                if (formData.rememberMe) {
+                    localStorage.setItem('rememberMe', 'true');
+                }
+                
+                // Fetch user info after successful login
+                await fetchUserInfo();
+                
+                setLoginSuccess(true);
+                setFormData({
+                    email: '',
+                    password: '',
+                    rememberMe: false,
+                });
+                
+                toast.success('Login successful! ✨');
+                setTimeout(() => router.push('/dashboard'), 1500);
+            }
+        },
+        onError: (error) => {
+            let errorMessage = 'Login failed. Please try again.';
+            if (error instanceof Error && 'response' in error) {
+                const axiosError = error as { response?: { data?: { message?: string } } };
+                errorMessage = axiosError.response?.data?.message || errorMessage;
+            }
+            setErrors({ email: errorMessage });
+            toast.error(errorMessage);
+        },
+    });
 
     // Validate form
     const validateForm = (): boolean => {
@@ -56,46 +108,14 @@ const LoginPage = () => {
     };
 
     // Submit
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
 
-        setIsSubmitting(true);
-
-        try {
-            const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/signin`, {
-                identifier: formData.email,
-                password: formData.password,
-            });
-
-            if (response.data.success && response.data.data.token) {
-                localStorage.setItem('authToken', response.data.data.token);
-                if (formData.rememberMe) {
-                    localStorage.setItem('rememberMe', 'true');
-                }
-                
-                // Fetch user info after successful login
-                await fetchUserInfo();
-            }
-
-            setLoginSuccess(true);
-            setFormData({
-                email: '',
-                password: '',
-                rememberMe: false,
-            });
-
-            setTimeout(() => router.push('/dashboard'), 1500);
-        } catch (error) {
-            let errorMessage = 'Login failed. Please try again.';
-            if (error instanceof Error && 'response' in error) {
-                const axiosError = error as { response?: { data?: { message?: string } } };
-                errorMessage = axiosError.response?.data?.message || errorMessage;
-            }
-            setErrors({ email: errorMessage });
-        } finally {
-            setIsSubmitting(false);
-        }
+        loginMutation.mutate({
+            email: formData.email,
+            password: formData.password,
+        });
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,11 +277,11 @@ const LoginPage = () => {
                             {/* SUBMIT */}
                             <button
                                 type="submit"
-                                disabled={isSubmitting}
+                                disabled={loginMutation.isPending}
                                 className="w-full mt-6 bg-linear-to-r from-orange-500 to-amber-600 text-white font-bold py-3 px-4 rounded-xl 
                                 hover:shadow-lg hover:shadow-orange-500/40 transition-all duration-300 disabled:opacity-50"
                             >
-                                {isSubmitting ? 'Signing in...' : 'Sign In'}
+                                {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
                             </button>
 
                             {/* DIVIDER */}
@@ -299,6 +319,7 @@ const LoginPage = () => {
                 </div>
 
             </div>
+            <Toaster position="top-right" />
         </div>
     );
 };

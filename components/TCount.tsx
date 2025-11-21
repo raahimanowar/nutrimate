@@ -1,5 +1,6 @@
 'use client'
 import React, { useEffect, useState, useMemo } from "react";
+import CommunityAnim from "./communityanim";
 
 const TrustedCount = () => {
     // Counter targets
@@ -40,8 +41,8 @@ const TrustedCount = () => {
             <div className="absolute bottom-0 left-20 w-[400px] h-[400px] rounded-full 
                 bg-linear-to-tr from-orange-200/25 to-amber-100/10 blur-3xl opacity-40"></div>
 
-            <div className="relative max-w-7xl mx-auto text-center">
-                <div className="mb-16 space-y-6">
+            <div className="relative max-w-7xl mx-auto">
+                <div className="mb-16 space-y-6 text-center">
                     <h2 className="text-4xl sm:text-5xl font-black text-gray-900">
                         Trusted by a Growing Community
                     </h2>
@@ -51,28 +52,39 @@ const TrustedCount = () => {
                     </p>
                 </div>
 
-                {/* Animated Stats Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {stats.map((stat, i) => (
-                        <div
-                            key={i}
-                            className="group p-8 rounded-2xl backdrop-blur-xl bg-white/40 border border-white/50
-                            hover:bg-white/60 hover:border-white/70 transition-all duration-300
-                            shadow-lg hover:shadow-xl hover:shadow-orange-200/30"
-                        >
-                            {/* Count Number */}
-                            <div className="text-5xl font-extrabold 
-                                bg-linear-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent">
-                                {counts[i]}
-                                {stat.label.includes("kg") ? "" : "+"}
-                            </div>
-
-                            {/* Label */}
-                            <p className="text-gray-700 font-medium mt-4">
-                                {stat.label}
-                            </p>
+                {/* Content Grid - Animation + Stats */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    
+                    {/* Left - Animation */}
+                    <div className="flex justify-center">
+                        <div className="w-full max-w-md">
+                            <CommunityAnim />
                         </div>
-                    ))}
+                    </div>
+
+                    {/* Right - Animated Stats Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {stats.map((stat, i) => (
+                            <div
+                                key={i}
+                                className="group p-8 rounded-2xl backdrop-blur-xl bg-white/40 border border-white/50
+                                hover:bg-white/60 hover:border-white/70 transition-all duration-300
+                                shadow-lg hover:shadow-xl hover:shadow-orange-200/30"
+                            >
+                                {/* Count Number */}
+                                <div className="text-5xl font-extrabold 
+                                    bg-linear-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent">
+                                    {counts[i]}
+                                    {stat.label.includes("kg") ? "" : "+"}
+                                </div>
+
+                                {/* Label */}
+                                <p className="text-gray-700 font-medium mt-4">
+                                    {stat.label}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </section>

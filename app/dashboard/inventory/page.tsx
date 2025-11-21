@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus, Search, ArrowUpDown } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import { useUserInfo } from '@/lib/context/UserContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import AddInventoryModal from './AddInventoryModal';
 import InventoryTable from './InventoryTable';
 import SuggestedTipsTable from './SuggestedTipsTable';
@@ -165,6 +167,11 @@ const InventoryPage = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
             setIsModalOpen(false);
+            toast.success('Item added successfully! ✨');
+        },
+        onError: (error) => {
+            const message = error instanceof Error ? error.message : 'Failed to add item';
+            toast.error(message);
         },
     });
 
@@ -182,6 +189,11 @@ const InventoryPage = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
+            toast.success('Item deleted successfully! 🗑️');
+        },
+        onError: (error) => {
+            const message = error instanceof Error ? error.message : 'Failed to delete item';
+            toast.error(message);
         },
     });
 
@@ -218,11 +230,17 @@ const InventoryPage = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['inventory'] });
             setEditModal({ isOpen: false, item: null });
+            toast.success('Item updated successfully! ✏️');
+        },
+        onError: (error) => {
+            const message = error instanceof Error ? error.message : 'Failed to update item';
+            toast.error(message);
         },
     });
 
     return (
         <div className="w-full h-full p-8">
+            <Toaster position="top-right" reverseOrder={false} />
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
@@ -398,14 +416,7 @@ const InventoryPage = () => {
                 )}
 
                 {/* Loading State */}
-                {isLoading && (
-                    <div className="flex items-center justify-center h-64">
-                        <div className="text-center">
-                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
-                            <p className="mt-4 text-gray-600">Loading inventory...</p>
-                        </div>
-                    </div>
-                )}
+                {isLoading && <LoadingSpinner message="Loading Inventory..." />}
 
                 {/* Error State */}
                 {error && (

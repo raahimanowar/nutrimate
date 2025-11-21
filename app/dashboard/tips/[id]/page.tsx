@@ -4,7 +4,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, AlertCircle, Calendar, Tag, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Calendar, Tag, Link as LinkIcon, Video, Apple, Dumbbell, Wind, Brain, BookOpen } from 'lucide-react';
 
 interface ResourceDetail {
   id: string;
@@ -39,15 +39,15 @@ const TipDetailPage = () => {
   const getCategoryIcon = (category: string) => {
     switch (category?.toLowerCase()) {
       case 'nutrition':
-        return '🥗';
+        return <Apple className="w-5 h-5 text-green-600" />;
       case 'fitness':
-        return '💪';
+        return <Dumbbell className="w-5 h-5 text-red-600" />;
       case 'wellness':
-        return '🧘';
+        return <Wind className="w-5 h-5 text-blue-600" />;
       case 'mental health':
-        return '🧠';
+        return <Brain className="w-5 h-5 text-purple-600" />;
       default:
-        return '📚';
+        return <BookOpen className="w-5 h-5 text-gray-600" />;
     }
   };
 
@@ -166,7 +166,9 @@ const TipDetailPage = () => {
               <div className="relative p-8 sm:p-12">
                 {/* Category Icon and Type Badge */}
                 <div className="flex items-start justify-between gap-4 mb-6">
-                  <div className="text-5xl">{getCategoryIcon(resource.category)}</div>
+                  <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-orange-100">
+                    {getCategoryIcon(resource.category)}
+                  </div>
                   <span className={`px-4 py-2 rounded-full text-sm font-bold capitalize ${getTypeColor(resource.type)}`}>
                     {resource.type}
                   </span>
@@ -208,7 +210,7 @@ const TipDetailPage = () => {
                 <div className="absolute inset-0 bg-linear-to-br from-orange-50/30 via-transparent to-amber-50/30 pointer-events-none"></div>
                 <div className="relative p-6 sm:p-8">
                   <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="text-2xl">🎥</span>
+                    <Video className="w-6 h-6 text-red-600" />
                     Watch Video
                   </h2>
                   <div className="relative w-full aspect-video rounded-xl overflow-hidden shadow-lg bg-black">

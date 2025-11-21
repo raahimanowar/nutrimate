@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { ArrowRight, AlertCircle, BookOpen, Zap, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { ArrowRight, AlertCircle, BookOpen, Zap, ChevronLeft, ChevronRight, ChevronDown, Apple, Dumbbell, Wind, Brain } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface Resource {
   id: string;
@@ -83,15 +84,15 @@ const TipsPage = () => {
   const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
       case 'nutrition':
-        return '🥗';
+        return <Apple className="w-8 h-8 text-green-600" />;
       case 'fitness':
-        return '💪';
+        return <Dumbbell className="w-8 h-8 text-red-600" />;
       case 'wellness':
-        return '🧘';
+        return <Wind className="w-8 h-8 text-blue-600" />;
       case 'mental health':
-        return '🧠';
+        return <Brain className="w-8 h-8 text-purple-600" />;
       default:
-        return '📚';
+        return <BookOpen className="w-8 h-8 text-gray-600" />;
     }
   };
 
@@ -227,14 +228,7 @@ const TipsPage = () => {
         </div>
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-linear-to-br from-orange-400 to-amber-500 mx-auto animate-pulse"></div>
-              <p className="text-lg text-gray-600 font-medium">Loading resources...</p>
-            </div>
-          </div>
-        )}
+        {isLoading && <LoadingSpinner message="Loading Resources..." />}
 
         {/* Error State */}
         {error && !isLoading && (
@@ -273,7 +267,9 @@ const TipsPage = () => {
                       {/* Header */}
                       <div className="mb-4">
                         <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="text-3xl">{getCategoryIcon(resource.category)}</div>
+                          <div className="flex items-center justify-center w-10 h-10">
+                            {getCategoryIcon(resource.category)}
+                          </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${getTypeColor(resource.type)}`}>
                             {resource.type}
                           </span>
@@ -284,15 +280,10 @@ const TipsPage = () => {
                       </div>
 
                       {/* Category Badge */}
-                      <div className="mb-4 flex items-center gap-2">
+                      <div className="mb-6 flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-orange-500"></div>
                         <span className="text-sm font-semibold text-orange-600 capitalize">{resource.category}</span>
                       </div>
-
-                      {/* Description */}
-                      <p className="text-gray-600 text-sm mb-6 grow line-clamp-3">
-                        {resource.description || 'No description available'}
-                      </p>
 
                       {/* See Details Button */}
                       <Link

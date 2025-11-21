@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { Plus, Trash2, X, Calendar, Droplet, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface DailyLogItem {
   _id: string;
@@ -171,6 +172,11 @@ const DailyLogPage = () => {
         notes: '',
       });
       setShowAddModal(false);
+      toast.success('Item added to daily log! 🍽️');
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to add item';
+      toast.error(message);
     },
   });
 
@@ -183,6 +189,11 @@ const DailyLogPage = () => {
       queryClient.invalidateQueries({ queryKey: ['trackingSummary'] });
       queryClient.invalidateQueries({ queryKey: ['calorieData'] });
       queryClient.invalidateQueries({ queryKey: ['waterData'] });
+      toast.success('Item removed! 🗑️');
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to delete item';
+      toast.error(message);
     },
   });
 
@@ -200,7 +211,11 @@ const DailyLogPage = () => {
       // Also invalidate the query to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['dailyLog', selectedDate] });
     },
-    onError: () => {
+    onError: (error) => {
+      // Show error toast
+      const message = error instanceof Error ? error.message : 'Failed to update water intake';
+      toast.error(message);
+      
       // Refetch on error to restore correct state
       queryClient.invalidateQueries({ queryKey: ['dailyLog', selectedDate] });
       queryClient.invalidateQueries({ queryKey: ['trackingSummary'] });
@@ -333,14 +348,7 @@ const DailyLogPage = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-amber-50 p-8 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-linear-to-br from-orange-400 to-amber-500 mx-auto animate-pulse"></div>
-          <p className="text-lg text-gray-600 font-medium">Loading daily log...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading Daily Log..." fullScreen />;
   }
 
   if (error) {

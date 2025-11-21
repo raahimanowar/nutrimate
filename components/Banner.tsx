@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
     ArrowRight,
@@ -6,6 +8,8 @@ import {
     BookOpen,
     Briefcase
 } from "lucide-react";
+import FoodAnim from "./FoodAnim";
+import FoodAnim2 from "./FoodAnim2";
 
 const Banner = () => {
     return (
@@ -51,9 +55,11 @@ const Banner = () => {
                         </div>
 
                     </div>
-
+                    <div className="absolute left-272 -top-48 w-80 h-80 opacity-60 hidden lg:block z-10">
+                        <FoodAnim2 />
+                    </div>
                     {/* RIGHT CARD */}
-                    <div className="relative group">
+                    <div className="z-11 group">
 
                         {/* Soft Glow */}
                         <div className="absolute -inset-1 bg-linear-to-br from-orange-300/30 via-amber-200/10 to-transparent rounded-3xl blur-2xl opacity-60 group-hover:opacity-100 transition-all duration-300" />
@@ -76,6 +82,7 @@ const Banner = () => {
                                     <Target className="w-7 h-7 text-orange-600" />
                                 </div>
                             </div>
+
 
                             {/* GRID STEPS */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
@@ -136,6 +143,11 @@ const Banner = () => {
                                 <ArrowRight className="w-4 h-4 text-orange-700 group-hover:translate-x-1 transition-transform" />
                             </div>
 
+                        </div>
+
+                        {/* Animation */}
+                        <div className="absolute right-130 -bottom-28 w-80 h-80 opacity-80 hidden lg:block">
+                            <FoodAnim />
                         </div>
                     </div>
 

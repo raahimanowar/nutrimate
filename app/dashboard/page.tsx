@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Package, TrendingUp, Droplet, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import LoadingSpinner from '@/components/LoadingSpinner';
 import {
   LineChart,
   Line,
@@ -237,17 +238,7 @@ const DashboardPage = () => {
   const calorieSummary = calorieData?.data?.summary?.calories;
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-linear-to-br from-orange-500 to-amber-500 mx-auto animate-pulse"></div>
-          <div className="space-y-1">
-            <p className="text-lg font-semibold text-gray-800">Loading Dashboard</p>
-            <p className="text-sm text-gray-600">Fetching your nutrition data...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading Dashboard..." fullScreen />;
   }
 
   return (

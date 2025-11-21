@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Link from 'next/link';
 import { X, ArrowRight, AlertCircle } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface Resource {
   id: string;
@@ -81,12 +82,7 @@ const ResourcesModal: React.FC<ResourcesModalProps> = ({ isOpen, onClose, catego
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8">
-          {isLoading && (
-            <div className="text-center py-8">
-              <div className="w-12 h-12 rounded-full bg-linear-to-br from-orange-400 to-amber-500 mx-auto animate-pulse mb-4"></div>
-              <p className="text-gray-600 font-medium">Loading tips...</p>
-            </div>
-          )}
+          {isLoading && <LoadingSpinner message="Loading tips..." />}
 
           {error && !isLoading && (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3">
