@@ -10,7 +10,7 @@ export interface PurifiedData {
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
-const GEMINI_API_KEY = 'AIzaSyAHLckHbURBcz3TcEOPYIf7WStLPbOBkh8';
+const GEMINI_API_KEY = '';
 
 export const purifyExtractedText = async (extractedText: string): Promise<PurifiedData> => {
   try {
